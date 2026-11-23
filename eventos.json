@@ -1,1 +1,57 @@
-[{"descripcion":"Vigilancia activa desde el 22 de noviembre de 2026: cada semana se revisan altas, bajas y cambios de datos de las escuelas alrededor del Instituto Juventud del Estado de México (Naucalpan de Juárez, radio de 10 km) y se anotan aquí los eventos, promociones y cambios detectados.","escuela":"(general)","fecha":"2026-11-22","fuente":"Serch Education — revisión semanal (tools/snapshot.py)","tipo":"vigilancia"}]
+[
+  {
+    "descripcion": "Vigilancia activa desde el 22 de noviembre de 2026: cada semana se revisan altas, bajas y cambios de datos de las escuelas alrededor del Instituto Juventud del Estado de México (Naucalpan de Juárez, radio de 10 km) y se anotan aquí los eventos, promociones y cambios detectados.",
+    "escuela": "(general)",
+    "fecha": "2026-11-22",
+    "fuente": "Serch Education — revisión semanal (tools/snapshot.py)",
+    "tipo": "vigilancia"
+  },
+  {
+    "escuelaId": "way/412793129",
+    "escuela": "Colegio de Ciencias y Humanidades Plantel Naucalpan",
+    "tipo": "evento",
+    "fecha": "2026-11-23",
+    "descripcion": "Semana de las Ciencias «Protección y Bienestar Animal», del 23 al 27 de noviembre de 2026: ponencias, proyecciones, talleres, exposición de materiales didácticos y charlas de divulgación.",
+    "fuente": "Facebook Pulso CCH Naucalpan (https://www.facebook.com/PulsoCCHN/posts/pfbid02dqMkyfAxHnkhP1zMLBZd77mbxkFsdvX4pSUHUcA3tG9xyH44eJYWATpLfXyTbwhWl) y sitio del plantel"
+  },
+  {
+    "escuelaId": "way/412793129",
+    "escuela": "Colegio de Ciencias y Humanidades Plantel Naucalpan",
+    "tipo": "evento",
+    "fecha": "2026-11-25",
+    "descripcion": "Jornada 25N — Día Internacional de la Eliminación de la Violencia contra la Mujer: actividades de la comunidad programadas entre el 5 de noviembre y el 4 de diciembre de 2026.",
+    "fuente": "Convocatoria oficial del plantel (http://www.cch-naucalpan.unam.mx/mensajes/RegistroActividades25N2026.pdf)"
+  },
+  {
+    "escuelaId": "node/10090682417",
+    "escuela": "RCP México",
+    "tipo": "evento",
+    "fecha": "2026-11-28",
+    "descripcion": "Curso BLS (Basic Life Support) para profesionales de la salud, sede Hacienda de Salitrillo 25, Bosque de Echegaray, Naucalpan.",
+    "fuente": "https://www.rcp-mexico.com/cursos/10/basic-life-support-bls.html"
+  },
+  {
+    "escuelaId": "node/10090682417",
+    "escuela": "RCP México",
+    "tipo": "evento",
+    "fecha": "2026-12-05",
+    "descripcion": "Curso BLS (Basic Life Support), segunda fecha publicada, sede Bosque de Echegaray, Naucalpan.",
+    "fuente": "https://www.rcp-mexico.com/cursos/10/basic-life-support-bls.html"
+  },
+  {
+    "escuelaId": "node/10090682417",
+    "escuela": "RCP México",
+    "tipo": "evento",
+    "fecha": "2026-11-28",
+    "descripcion": "Curso ACLS (Advanced Cardiovascular Life Support), sede Hacienda de Salitrillo 25, Bosque de Echegaray, Naucalpan.",
+    "fuente": "https://www.rcp-mexico.com/cursos/14/advanced-cardiovascular-life-support-acls.html"
+  },
+  {
+    "escuelaId": "node/10090682417",
+    "escuela": "RCP México",
+    "tipo": "evento",
+    "fecha": "2026-12-05",
+    "descripcion": "Curso ACLS (Advanced Cardiovascular Life Support), segunda fecha publicada, sede Bosque de Echegaray, Naucalpan.",
+    "fuente": "https://www.rcp-mexico.com/cursos/14/advanced-cardiovascular-life-support-acls.html"
+  }
+]

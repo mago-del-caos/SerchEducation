@@ -1,1 +1,241 @@
-{}
+{
+  "way/584030857": {
+    "tipo": "gratuita",
+    "servicios": [
+      "Biblioteca escolar",
+      "Aula de cómputo con 44 equipos e internet",
+      "Proyectores en aulas (9, según ficha tipo censo SEP)"
+    ],
+    "fuente": "https://www.estudia.com.mx/escuela-primaria-las-americas-escuela-primaria-general-naucalpan-de-juarez-mexico-15EPR1261Q.html",
+    "fecha": "2026-11-23",
+    "valoracion": {
+      "estrellas": 4.4,
+      "opiniones": 26,
+      "fuente": "https://twopos.mx/2724/60060",
+      "fecha": "2026-11-23"
+    },
+    "nota": "Escuela Primaria General pública estatal, CCT 15EPR1261Q, turno matutino, Toronto 40 / Zona Verde, Las Américas. Tiene página de Facebook (facebook.com/106290179521132); sin eventos ni promociones vigentes localizados al 2026-11-23. Servicios según alaescuela (datos tipo censo SEP)."
+  },
+  "way/1425937100": {
+    "tipo": "gratuita",
+    "servicios": [
+      "Biblioteca escolar",
+      "Sala de cómputo con 48 equipos e internet",
+      "7 proyectores",
+      "Patio cívico",
+      "Rampas de acceso",
+      "Alarma sísmica"
+    ],
+    "fuente": "https://www.alaescuela.com.mx/primaria/mexico/lic-adolfo-lopez-mateos_ed.html",
+    "fecha": "2026-11-23",
+    "valoracion": {
+      "estrellas": 4.0,
+      "opiniones": 14,
+      "fuente": "https://exa.ai/library/places?ids=18l6rb2y98y%2Cvr024bd82m9%2Cs7zlbjwhxhc%2C1tcntqj7wks%2Cy6z6wz2pkzn%2Chwc1bgdrgrw%2Cdttfd7gh66z%2C379wltr2b0j%2Cppm6p7q5wnc%2Ckmrr6gc936d",
+      "fecha": "2026-11-23"
+    },
+    "nota": "Primaria pública estatal, CCT 15EPR1072Y, Av. de los Remedios s/n, Naucalpan Centro, turno matutino, ~795 alumnos. NO confundir con la primaria Art. 123 «escuela vagón» del mismo nombre en Av. F.C. Acámbaro (CCT 15DPR3008L): es otro plantel. Sin sitio ni redes propios localizados; sin eventos vigentes."
+  },
+  "way/1425937102": {
+    "tipo": "gratuita",
+    "beneficios": [
+      "Beca Benito Juárez — escuela prioritaria de Educación Básica"
+    ],
+    "fuente": "https://escuelasmex.com/directorio/15EES0192X/ofic-no-0096-dr-maximiliano-ruiz-castaneda",
+    "fecha": "2026-11-23",
+    "valoracion": {
+      "estrellas": 4.2,
+      "opiniones": 79,
+      "fuente": "https://twopos.mx/2724/60032",
+      "fecha": "2026-11-23"
+    },
+    "nota": "Escuela Secundaria Oficial No. 0096, pública estatal, CCT 15EES0192X (matutino) y 15EES0689E (vespertino), Calz. de los Remedios 44, San Bartolo Naucalpan. Facebook: facebook.com/115138361904690. Sin eventos ni promociones vigentes localizados al 2026-11-23."
+  },
+  "way/1425933939": {
+    "tipo": "gratuita",
+    "servicios": [
+      "Biblioteca escolar",
+      "Patio cívico"
+    ],
+    "fuente": "https://dif.naucalpan.gob.mx",
+    "fecha": "2026-11-23",
+    "valoracion": {
+      "estrellas": 3.8,
+      "opiniones": 4,
+      "fuente": "Google Maps (ficha del lugar)",
+      "fecha": "2026-11-23"
+    },
+    "nota": "Jardín de Niños del DIF Naucalpan («Casa Luminosa»), público, CCT 15EJN4842Z, Av. Norteamérica / Callejón de Padre Figueroa No. 1, Naucalpan Centro; horario de atención 08:45–13:00 según el DIF municipal. Servicios según alaescuela (datos tipo censo SEP, con cautela). Sin eventos vigentes localizados."
+  },
+  "way/1063805531": {
+    "tipo": "gratuita",
+    "fuente": "https://sites.google.com/view/escuelasecundariatcnicano13/",
+    "fecha": "2026-11-23",
+    "nota": "Secundaria Técnica federal pública (SEP), CCT 15DST0013O, Calz. de los Remedios 4, Col. Las Américas. Tiene sitio propio en Google Sites (sus avisos visibles son de 2022, desactualizados) y Facebook (facebook.com/203514049674323). Su ficha de Google no muestra valoración. Sin eventos vigentes localizados al 2026-11-23."
+  },
+  "node/4465624791": {
+    "tipo": "pago",
+    "servicios": [
+      "Clases de idiomas (inglés)",
+      "Preescolar, primaria y secundaria en el mismo plantel"
+    ],
+    "fuente": "https://www.micole.net/mx/estado-de-mexico/naucalpan-de-juarez/colegio-celestin-freinet",
+    "fecha": "2026-11-23",
+    "valoracion": {
+      "estrellas": 3.7,
+      "opiniones": 34,
+      "fuente": "https://twopos.mx/2724/42540",
+      "fecha": "2026-11-23"
+    },
+    "nota": "Colegio privado, CCT primaria 15PPR3543R y secundaria 15PES1350I, Av. Jardines de San Mateo 135 / Calle de los Tarascos 133, Santa Cruz Acatlán. Costos NO publicados (los directorios indican «Consultar» / «pendiente de verificar»), por lo que no hay campo de costos. Se localizó un formulario en línea de inscripción 2026-2027 (celestin-administrativa.app.edtools.co), sin fecha de cierre publicada; no se registró como evento al no poder confirmar su vigencia. El sitio colegiocelestinfreinet.com.mx corresponde al plantel de Ecatepec, NO a este."
+  },
+  "way/1063805532": {
+    "tipo": "gratuita",
+    "servicios": [
+      "Biblioteca escolar",
+      "Dos aulas de cómputo con internet",
+      "Canchas deportivas",
+      "Plaza cívica",
+      "Rampas de acceso"
+    ],
+    "beneficios": [
+      "Programa Nacional de Inglés en Educación Básica",
+      "Programa Nacional de Lectura",
+      "Programa «Ver Bien para Aprender Mejor»"
+    ],
+    "fuente": "https://www.alaescuela.com.mx/primaria/mexico/generalisimo-morelos_6.html",
+    "fecha": "2026-11-23",
+    "nota": "Primaria pública estatal, CCT 15EPR0276L (matutino) y 15EPR0802O (vespertino), Av. Corona No. 3, Naucalpan Centro. Sin sitio ni redes propios localizados y sin valoración de Google localizada para este plantel (las fichas homónimas de Zumpango y Cuautitlán Izcalli son otros planteles). El desayunador escolar del DIF está documentado en 2017; no se afirma como vigente."
+  },
+  "way/1425933938": {
+    "fuente": "https://exa.ai/library/place/4kdjlv7rtg9",
+    "fecha": "2026-11-23",
+    "valoracion": {
+      "estrellas": 5.0,
+      "opiniones": 1,
+      "fuente": "https://exa.ai/library/place/4kdjlv7rtg9",
+      "fecha": "2026-11-23"
+    },
+    "nota": "Sin presencia pública localizada: solo se encontró su ficha de Google, que lo nombra «J.N. LEÓN FELIPE VESPERTINO», Av. Corona 5, Bosque de los Remedios, y el padrón municipal de escuelas (LEON FELIPE, Preescolar, Av. Corona 5). No se localizó CCT, sitio ni redes del plantel, ni una fuente explícita de su sostenimiento, por lo que el tipo queda SIN confirmar. No confundir con la Comunidad Educativa León Felipe (Montessori) de Atizapán de Zaragoza."
+  },
+  "way/412793129": {
+    "tipo": "gratuita",
+    "fuente": "https://www.cch-naucalpan.unam.mx/",
+    "fecha": "2026-11-23",
+    "valoracion": {
+      "estrellas": 4.7,
+      "opiniones": 1304,
+      "fuente": "https://exa.ai/library/place/gw72g7mfv91",
+      "fecha": "2026-11-23"
+    },
+    "eventos": [
+      {
+        "titulo": "Semana de las Ciencias: Protección y Bienestar Animal",
+        "fecha": "2026-11-23",
+        "descripcion": "Del 23 al 27 de noviembre de 2026: ponencias, proyecciones de películas y documentales, exposición de materiales didácticos, talleres y charlas de divulgación. Convocatoria difundida por Pulso CCH Naucalpan (Facebook) y el sitio del plantel."
+      },
+      {
+        "titulo": "Jornada 25N — Día Internacional de la Eliminación de la Violencia contra la Mujer",
+        "fecha": "2026-11-25",
+        "descripcion": "Actividades de la comunidad del plantel programadas entre el 5 de noviembre y el 4 de diciembre de 2026, según la convocatoria oficial del plantel (el registro de actividades cerró el 10 de noviembre)."
+      }
+    ],
+    "nota": "Bachillerato de la UNAM, Calzada de los Remedios núm. 10, Col. Bosque de los Remedios. El ingreso es por el proceso ECOEMS; el proceso 2027 aún no se anunciaba al 2026-11-23."
+  },
+  "node/4465615290": {
+    "tipo": "gratuita",
+    "servicios": [
+      "Biblioteca escolar",
+      "Aula de cómputo (47 equipos en turno matutino)",
+      "Internet",
+      "Canchas deportivas",
+      "Patio cívico",
+      "Rampas de acceso"
+    ],
+    "fuente": "DENUE / INEGI — registro de escuelas públicas de educación primaria",
+    "fecha": "2026-11-23",
+    "valoracion": {
+      "estrellas": 4.0,
+      "opiniones": 13,
+      "fuente": "https://exa.ai/library/places?ids=18l6rb2y98y%2Cvr024bd82m9%2Cs7zlbjwhxhc%2C1tcntqj7wks%2Cy6z6wz2pkzn%2Chwc1bgdrgrw%2Cdttfd7gh66z%2C379wltr2b0j%2Cppm6p7q5wnc%2Ckmrr6gc936d",
+      "fecha": "2026-11-23"
+    },
+    "nota": "Escuela Primaria «Gral. Manuel Ávila Camacho», José Becerril 28, San Bartolo, Naucalpan Centro; turnos matutino y vespertino; ~710 alumnos (alaescuela). Sin sitio ni redes propios localizados; sin eventos vigentes."
+  },
+  "way/1425922716": {
+    "tipo": "gratuita",
+    "servicios": [
+      "Atención odontológica de especialidades (sede de la Especialización en Ortodoncia), con cita previa, por alumnos de posgrado supervisados"
+    ],
+    "fuente": "https://posgrado.iztacala.unam.mx",
+    "fecha": "2026-11-23",
+    "valoracion": {
+      "estrellas": 4.1,
+      "opiniones": 18,
+      "fuente": "Google Maps (ficha del lugar)",
+      "fecha": "2026-11-23"
+    },
+    "nota": "NO es una escuela de educación básica: es la Clínica de Especialidades Naucalpan de la FES Iztacala (UNAM), Calle Corona s/n frente al No. 50, Col. Figueroa, Naucalpan. La FES Iztacala opera 8 clínicas odontológicas con cita previa."
+  },
+  "node/4951010022": {
+    "tipo": "gratuita",
+    "servicios": [
+      "Biblioteca escolar",
+      "Patio cívico",
+      "Rampas de acceso"
+    ],
+    "fuente": "https://naucalpan.gob.mx/wp-content/uploads/2026/08/Padron_Escuelas_Naucalpan_UTF8.csv",
+    "fecha": "2026-11-23",
+    "nota": "Jardín de Niños Sor Juana Inés de la Cruz, escuela pública, Vicente Guerrero 7, Naucalpan Centro; atiende a niños de 3 a 6 años, horario 8:30–13:30 según directorios. Sin sitio ni redes propios localizados y sin valoración de Google localizada para este plantel. NO confundir con el kínder y guardería privado del mismo nombre en Sierra Madre del Norte 45: es otro plantel y sus anuncios de inscripciones NO corresponden a esta escuela."
+  },
+  "way/1425922712": {
+    "tipo": "gratuita",
+    "servicios": [
+      "Aula de cómputo con 19 equipos e internet"
+    ],
+    "beneficios": [
+      "Programa Nacional de Lectura"
+    ],
+    "fuente": "https://escuelasmex.com/directorio/15EPR1420O/reforma",
+    "fecha": "2026-11-23",
+    "nota": "Primaria pública estatal, CCT 15EPR1420O, Calle Palma 138, Col. Los Remedios, turno matutino, fundada en 1976. Su ficha de Google enlaza una página de Facebook (facebook.com/390053338056348) y no muestra valoración. Sin eventos vigentes localizados al 2026-11-23."
+  },
+  "node/10090682417": {
+    "tipo": "pago",
+    "servicios": [
+      "Cursos BLS, ACLS, PALS, PEARS, EMPACT, Salvacorazones RCP/DEA y primeros auxilios, con certificación de la American Heart Association",
+      "Sitio de Entrenamiento Autorizado de la AHA"
+    ],
+    "fuente": "https://www.rcp-mexico.com/",
+    "fecha": "2026-11-23",
+    "valoracion": {
+      "estrellas": 4.8,
+      "opiniones": 5,
+      "fuente": "https://mx.latinoplaces.com/mexico/rcp-mexico-1489127",
+      "fecha": "2026-11-23"
+    },
+    "eventos": [
+      {
+        "titulo": "Curso BLS (Basic Life Support)",
+        "fecha": "2026-11-28",
+        "descripcion": "Curso de soporte vital básico para profesionales de la salud, en la sede de Hacienda de Salitrillo 25, Bosque de Echegaray, Naucalpan. Fecha publicada en la página del curso de rcp-mexico.com."
+      },
+      {
+        "titulo": "Curso BLS (Basic Life Support)",
+        "fecha": "2026-12-05",
+        "descripcion": "Segunda fecha publicada del curso BLS en la sede de Bosque de Echegaray, Naucalpan (rcp-mexico.com)."
+      },
+      {
+        "titulo": "Curso ACLS (Advanced Cardiovascular Life Support)",
+        "fecha": "2026-11-28",
+        "descripcion": "Curso de soporte vital cardiovascular avanzado, en la sede de Hacienda de Salitrillo 25, Bosque de Echegaray, Naucalpan. Fecha publicada en la página del curso de rcp-mexico.com."
+      },
+      {
+        "titulo": "Curso ACLS (Advanced Cardiovascular Life Support)",
+        "fecha": "2026-12-05",
+        "descripcion": "Segunda fecha publicada del curso ACLS en la sede de Bosque de Echegaray, Naucalpan (rcp-mexico.com)."
+      }
+    ],
+    "nota": "NO es una escuela: es un centro privado de capacitación y certificación en reanimación cardiopulmonar, Hacienda de Salitrillo No. 25, Bosque de Echegaray, Naucalpan. Sus costos NO están publicados en su sitio (la inscripción es con depósito bancario, según sus preguntas frecuentes), por lo que no hay campo de costos."
+  }
+}
