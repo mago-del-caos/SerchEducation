@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Serch Education — Buscador de escuelas cerca de ti</title>
-<meta name="description" content="Serch Education: encuentra kinder, primarias, secundarias y preparatorias cerca de ti, gratuitas o de pago, con datos abiertos de OpenStreetMap.">
+<title>Serch Education — Buscador de escuelas desde el IJEM</title>
+<meta name="description" content="Serch Education: encuentra kinder, primarias, secundarias y preparatorias desde el Instituto Juventud o el Jardín de Niños IJEM, gratuitas o de pago, con datos abiertos de OpenStreetMap.">
 <link rel="icon" type="image/png" href="assets/icono-busqueda.png">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <link rel="manifest" href="manifest.json">
@@ -18,7 +18,7 @@
     <div>
       <h1><span class="serch">Serch</span> <span class="edu">Education</span></h1>
       <p class="saludo">Hola · <span class="fecha-hoy"></span></p>
-      <p>Encuentra kinder, primaria, secundaria y preparatoria cerca de ti, con datos abiertos de OpenStreetMap.</p>
+      <p>Encuentra kinder, primaria, secundaria y preparatoria desde el Instituto Juventud o el Jardín de Niños IJEM, con datos abiertos de OpenStreetMap.</p>
     </div>
   </a>
   <button class="btn-menu" id="btnMenu" aria-label="Abrir el menú de navegación" aria-haspopup="true" aria-expanded="false" aria-controls="menuNav">☰</button>
@@ -34,6 +34,10 @@
   <div class="aviso-datos">Los datos se consultan <strong>en vivo</strong> en OpenStreetMap. El nivel y el tipo (gratuita o de pago) se infieren de las etiquetas públicas del mapa; los costos casi nunca se publican: si no hay dato, la ficha dice «sin dato público» y hay que consultarlo con la escuela.</div>
 
   <section class="panel" aria-label="Controles de búsqueda">
+    <div class="fila">
+      <span class="etiqueta"><img src="assets/icono-radar.png" alt="" style="width:20px;height:20px;border-radius:50%;vertical-align:-5px;"> Centro de búsqueda:</span>
+      <div class="centros" id="selectorCentro" role="group" aria-label="Centro de búsqueda"></div>
+    </div>
     <div class="fila">
       <span class="etiqueta"><img src="assets/icono-distancia.png" alt="" style="width:20px;height:20px;border-radius:50%;vertical-align:-5px;"> Radio de búsqueda:</span>
       <span id="chipsRadio"></span>
@@ -61,7 +65,6 @@
       <button type="button" class="orden-btn" data-orden="fama"><img src="assets/icono-eventos.png" alt=""> ★ Mejor fama</button>
     </div>
     <div class="fila">
-      <button id="btnGps" class="destacado"><img src="assets/icono-radar.png" alt=""> Usar mi ubicación</button>
       <button id="btnBuscar" class="destacado"><img src="assets/icono-busqueda.png" alt=""> Buscar escuelas</button>
       <button type="button" class="btn-instalar">📲 Descargar la app</button>
     </div>
@@ -75,7 +78,7 @@
 
   <p class="estado-busqueda" id="estadoBusqueda" role="status"></p>
 
-  <div class="titulo-seccion"><img src="assets/icono-busqueda.png" alt=""> Escuelas cerca de ti <span id="conteo" style="font-size:.95rem; color:var(--texto2);"></span></div>
+  <div class="titulo-seccion"><img src="assets/icono-busqueda.png" alt=""> Escuelas desde el centro elegido <span id="conteo" style="font-size:.95rem; color:var(--texto2);"></span></div>
   <section id="lista"></section>
 </main>
 
@@ -225,13 +228,11 @@ function render() {
 }
 
 $("#btnBuscar").addEventListener("click", buscar);
-$("#btnGps").addEventListener("click", () => {
-  estado("Buscando tu ubicación…");
-  pedirUbicacion(
-    () => buscar(),
-    error => { estado('<span class="error">' + esc(error) + "</span>"); }
-  );
-});
+/* Selector de centro fijo: al intercambiar entre el Instituto
+   Juventud y el Jardín de Niños IJEM se vuelve a buscar con el
+   mismo radio y las distancias se recalculan desde el centro
+   elegido. Ya no hay origen libre por GPS. */
+montarSelectorCentro("#selectorCentro", () => buscar());
 
 /* ---------- Arranque: búsqueda en vivo con el radio elegido ---------- */
 buscar();

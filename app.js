@@ -7,35 +7,69 @@
    «sin dato público».
    ============================================================ */
 
-/* Origen por defecto: el Instituto Juventud del Estado de México
-   (Naucalpan de Juárez). El GPS lo reemplaza y se recuerda entre
-   páginas durante la sesión. */
-const CENTRO_DEFECTO = { lat: 19.4785, lng: -99.2396, etiqueta: "Instituto Juventud del Estado de México" };
-let origen = (() => {
+/* ============================================================
+   Centros FIJOS: la ubicación NO es libre ni usa GPS. La app
+   mide todo desde uno de dos centros institucionales, entre
+   los que se intercambia con el selector de centro:
+   - «ijem»:   Instituto Juventud del Estado de México
+               (Calzada San Agustín 61, Rincón Echegaray,
+               Naucalpan de Juárez).
+   - «kinder»: Jardín de Niños IJEM — el plantel de preescolar
+               del Instituto (Av. del Paseo 19, Colón de
+               Echegaray, Naucalpan; CCT SEP 15PJN1411W).
+               Coordenadas del registro del plantel devuelto
+               por la búsqueda de Places (browser.search) del
+               2026-11-23, corroboradas con el directorio de
+               planteles SEP de la misma clave CCT.
+   El centro activo se recuerda en sessionStorage
+   («serch_centro») y por defecto es el IJEM. La variable
+   `origen` sigue siendo el punto desde el que se mide todo:
+   siempre es una copia del centro activo.
+   ============================================================ */
+const CENTROS = {
+  ijem: { lat: 19.4785, lng: -99.2396, etiqueta: "Instituto Juventud del Estado de México" },
+  kinder: { lat: 19.49411, lng: -99.22223, etiqueta: "Jardín de Niños IJEM" }
+};
+const CENTRO_DEFECTO = CENTROS.ijem;   // el centro inicial es el IJEM
+let claveCentro = (() => {
   try {
-    const o = JSON.parse(sessionStorage.getItem("serch_origen") || "null");
-    if (o && typeof o.lat === "number" && typeof o.lng === "number") return o;
+    const c = sessionStorage.getItem("serch_centro");
+    if (c && CENTROS[c]) return c;
   } catch (e) { /* sin sessionStorage */ }
-  return { ...CENTRO_DEFECTO };
+  return "ijem";
 })();
-function fijarOrigen(o) {
-  origen = o;
-  try { sessionStorage.setItem("serch_origen", JSON.stringify(o)); } catch (e) { /* modo local */ }
+let origen = { ...CENTROS[claveCentro] };
+function centroActivo() { return claveCentro; }
+function fijarCentro(clave) {
+  if (!CENTROS[clave]) return origen;
+  claveCentro = clave;
+  origen = { ...CENTROS[clave] };
+  try { sessionStorage.setItem("serch_centro", clave); } catch (e) { /* sin sessionStorage */ }
+  return origen;
 }
-function hayGPS() {
-  // Verdadero si en esta sesión ya se fijó la ubicación real (botón GPS).
-  try { return !!sessionStorage.getItem("serch_origen"); } catch (e) { return false; }
-}
-function pedirUbicacion(onOk, onError) {
-  if (!navigator.geolocation) { if (onError) onError("Este navegador no ofrece geolocalización."); return; }
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      fijarOrigen({ lat: pos.coords.latitude, lng: pos.coords.longitude, etiqueta: "tu ubicación" });
-      if (onOk) onOk(origen);
-    },
-    () => { if (onError) onError("No se pudo obtener tu ubicación; se mantiene el centro de referencia: " + CENTRO_DEFECTO.etiqueta + "."); },
-    { enableHighAccuracy: true, timeout: 12000 }
-  );
+
+/* ---------- Selector de centro (control segmentado) ----------
+   Lo montan el Inicio y el Mapa. Al cambiar de centro se fija
+   el nuevo origen y se avisa con alCambiar() para que la página
+   vuelva a buscar, recalcule distancias y redibuje con él. */
+function montarSelectorCentro(selector, alCambiar) {
+  const cont = typeof selector === "string" ? $(selector) : selector;
+  if (!cont) return;
+  cont.innerHTML = Object.keys(CENTROS).map(clave =>
+    '<button type="button" class="centro-btn' + (clave === claveCentro ? " activo" : "") +
+    '" data-centro="' + clave + '" aria-pressed="' + (clave === claveCentro) + '">' +
+    (clave === "ijem" ? "Instituto Juventud" : "Jardín de Niños") + "</button>"
+  ).join("");
+  cont.querySelectorAll(".centro-btn").forEach(b => b.addEventListener("click", () => {
+    if (b.dataset.centro === claveCentro) return;
+    fijarCentro(b.dataset.centro);
+    cont.querySelectorAll(".centro-btn").forEach(x => {
+      const activo = x.dataset.centro === claveCentro;
+      x.classList.toggle("activo", activo);
+      x.setAttribute("aria-pressed", String(activo));
+    });
+    if (typeof alCambiar === "function") alCambiar(origen);
+  }));
 }
 
 /* ---------- Utilidades ---------- */
@@ -276,7 +310,8 @@ let resultados = [];
 function guardarResultados(radioKm) {
   try {
     sessionStorage.setItem("serch_resultados", JSON.stringify({
-      radioKm, origen: { lat: origen.lat, lng: origen.lng, etiqueta: origen.etiqueta },
+      radioKm, centro: claveCentro,
+      origen: { lat: origen.lat, lng: origen.lng, etiqueta: origen.etiqueta },
       ts: Date.now(), escuelas: resultados
     }));
   } catch (e) { /* sin sessionStorage: el detalle pedirá buscar de nuevo */ }
@@ -569,7 +604,7 @@ function botRespuesta(textoCrudo) {
   /* --- La más cercana --- */
   if (/(cerca|cercana|cercano|proxim)/.test(t)) {
     const e = lista[0]; // los resultados ya vienen ordenados por cercanía
-    return "La escuela más cercana" + (hayGPS() ? " a ti" : " al " + origen.etiqueta) +
+    return "La escuela más cercana desde " + esc(origen.etiqueta) +
       " es <strong>" + esc(e.nombre) + "</strong> (" + esc(e.nivel) + ", " + esc(e.tipoTexto) + ")" +
       botDistanciaTxt(e) + ".";
   }
@@ -716,6 +751,7 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     construirConsultaOverpass, clasificarNivel, clasificarTipo, normalizarEscuela,
     filtrarPorRadio, distanciaKm, normalizar, RADIOS_KM, aplicarDatosExtra, CENTRO_DEFECTO,
+    CENTROS, fijarCentro, centroActivo, montarSelectorCentro,
     pintarEstrellas, URLS_OVERPASS, endpointsOverpass
   };
 }

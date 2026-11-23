@@ -75,6 +75,11 @@ input:focus{outline:none; background:var(--tarjeta); border-color:rgba(56,182,23
 /* Chips de radio (1 a 50 km) */
 .chip-radio{font-size:1rem; padding:10px 18px;}
 .chip-radio.activo{background:var(--dorado); color:#3a2a00; box-shadow:0 4px 14px rgba(245,185,33,.3);}
+/* Selector de centro fijo: control segmentado IJEM / Jardín */
+.centros{display:inline-flex; flex-wrap:wrap; gap:4px; background:var(--tarjeta2); border:1px solid rgba(56,182,232,.25); border-radius:999px; padding:4px;}
+.centro-btn{border-color:transparent; box-shadow:none; border-radius:999px; padding:9px 18px;}
+.centro-btn:hover{box-shadow:none;}
+.centro-btn.activo{background:var(--dorado); color:#3a2a00; box-shadow:0 4px 14px rgba(245,185,33,.3);}
 /* Filtros por nivel con icono circular */
 .niveles{display:flex; gap:10px; flex-wrap:wrap;}
 .nivel-btn{
