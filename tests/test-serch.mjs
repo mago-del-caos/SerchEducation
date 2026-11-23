@@ -84,6 +84,7 @@ async function esperar(fn, nombre, ms = 8000) {
 }
 /* Doble de fetch: registra cada URL pedida en win.__urls.
    Opciones: {dataset} sustituye el cuerpo de escuelas.json;
+   {extra} sustituye el cuerpo de datos-extra.json;
    {datasetFalla:true} hace que escuelas.json lance (red caída). */
 function stubFetch(win, opciones = {}) {
   win.__urls = [];
@@ -95,7 +96,7 @@ function stubFetch(win, opciones = {}) {
       if (opciones.datasetFalla) throw new TypeError("fallo de red simulado (dataset)");
       return { ok: true, status: 200, json: async () => opciones.dataset || fixtureDataset };
     }
-    const cuerpo = u.includes("datos-extra.json") ? EXTRA
+    const cuerpo = u.includes("datos-extra.json") ? (opciones.extra || EXTRA)
       : u.includes("eventos.json") ? eventosReales
       : {};
     return { ok: true, status: 200, json: async () => cuerpo };
@@ -143,6 +144,56 @@ ok(ev("clasificarNivel({amenity:'school', name:'CBTis 184'})") === "Preparatoria
 ok(ev("clasificarTipo({amenity:'school','operator:type':'public'}).clave") === "gratuita", "tipo: operator:type=public → gratuita");
 ok(ev("clasificarTipo({amenity:'school','operator:type':'private'}).clave") === "pago", "tipo: operator:type=private → pago");
 ok(ev("clasificarTipo({amenity:'school'}).clave") === "sindato", "tipo: sin etiquetas → sin dato");
+/* --- Tipo: inferencia por nombre, conservadora y etiquetada --- */
+ok(ev("clasificarTipo({amenity:'school', name:'Colegio Ejemplo'}).clave") === "pago" &&
+   ev("clasificarTipo({amenity:'school', name:'Colegio Ejemplo'}).fuente") === "inferido" &&
+   ev("clasificarTipo({amenity:'school', name:'Colegio Ejemplo'}).texto") === "De pago (inferido)",
+   "tipo: «Colegio Ejemplo» sin etiquetas → pago INFERIDO, con su etiqueta");
+ok(ev("clasificarTipo({amenity:'school', name:'Escuela Primaria Benito Juárez'}).clave") === "gratuita" &&
+   ev("clasificarTipo({amenity:'school', name:'Escuela Primaria Benito Juárez'}).fuente") === "inferido",
+   "tipo: «Escuela Primaria…» sin etiquetas → gratuita inferida");
+ok(ev("clasificarTipo({amenity:'school', name:'Colegio de Bachilleres Plantel 13'}).clave") === "gratuita",
+   "tipo: «Colegio de Bachilleres» es PÚBLICO (no se infiere pago de todo «Colegio…»)");
+ok(ev("clasificarTipo({amenity:'school', name:'Colegio de Educación Profesional Técnica del Estado de México'}).clave") === "gratuita",
+   "tipo: el «Colegio de Educación Profesional Técnica» estatal es el CONALEP (público), no un colegio de pago");
+ok(ev("clasificarTipo({amenity:'school', name:'Colegio Ejemplo', 'operator:type':'public'}).clave") === "gratuita" &&
+   ev("clasificarTipo({amenity:'school', name:'Colegio Ejemplo', 'operator:type':'public'}).fuente") === "osm",
+   "tipo: lo DECLARADO en OSM no se sobrescribe por la inferencia del nombre");
+ok(ev("clasificarTipo({amenity:'school', name:'Instituto Cultural Amanecer'}).clave") === "sindato" &&
+   ev("clasificarTipo({amenity:'school', name:'Instituto Cultural Amanecer'}).fuente") === null,
+   "tipo: de «Instituto» a secas NO se infiere nada (hay institutos públicos)");
+ok(ev("inferirTipoPorNombre('Jardín de Niños Las Flores')") === "gratuita", "inferencia: «Jardín de Niños…» → gratuita");
+ok(ev("inferirTipoPorNombre('Preescolar Montessori Valle')") === "pago", "inferencia: la marca privada (Montessori) gana al patrón «Preescolar…»");
+ok(ev("inferirTipoPorNombre('Secundaria Técnica 45')") === "gratuita", "inferencia: «Secundaria Técnica» → gratuita");
+/* --- Nivel con fuente (triangulación OSM > nombre en la app) --- */
+ok(ev("clasificarNivelConFuente({amenity:'kindergarten', name:'Lo Que Sea'}).fuente") === "osm" &&
+   ev("clasificarNivelConFuente({amenity:'kindergarten', name:'Lo Que Sea'}).nivel") === "Kinder",
+   "nivel: amenity=kindergarten declara el nivel en OSM (fuente «osm»)");
+ok(ev("clasificarNivelConFuente({amenity:'school','isced:level':'2', name:'Lo Que Sea'}).nivel") === "Secundaria" &&
+   ev("clasificarNivelConFuente({amenity:'school','isced:level':'2', name:'Lo Que Sea'}).fuente") === "osm",
+   "nivel: isced:level manda sobre el nombre (fuente «osm»)");
+ok(ev("clasificarNivelConFuente({amenity:'school', name:'EPO 139'}).nivel") === "Preparatoria" &&
+   ev("clasificarNivelConFuente({amenity:'school', name:'EPO 139'}).fuente") === "inferido",
+   "nivel: «EPO 139» se resuelve por el nombre (fuente «inferido», patrón extendido)");
+ok(ev("clasificarNivelConFuente({amenity:'school', name:'CECyT 9'}).nivel") === "Preparatoria",
+   "nivel: «CECyT» (IPN) → Preparatoria por el nombre");
+ok(ev("textoNivel('Primaria','inferido')") === "Primaria (inferido)" && ev("textoNivel('Primaria','osm')") === "Primaria",
+   "el nivel solo lleva la etiqueta «(inferido)» cuando su fuente es el nombre");
+/* --- escuelaDesdeRegistro: tipo/nivel con fuente desde el dataset --- */
+ok(ev("escuelaDesdeRegistro({id:'node/201', nombre:'Colegio Ejemplo', nivel:'Primaria', tipo:'sindato', tipoTexto:'Tipo sin dato público', lat:19.48, lng:-99.24}).tipo") === "pago" &&
+   ev("escuelaDesdeRegistro({id:'node/201', nombre:'Colegio Ejemplo', nivel:'Primaria', tipo:'sindato', tipoTexto:'Tipo sin dato público', lat:19.48, lng:-99.24}).tipoFuente") === "inferido" &&
+   ev("escuelaDesdeRegistro({id:'node/201', nombre:'Colegio Ejemplo', nivel:'Primaria', tipo:'sindato', tipoTexto:'Tipo sin dato público', lat:19.48, lng:-99.24}).tipoTexto") === "De pago (inferido)",
+   "dataset: un registro «sin dato» llamado «Colegio Ejemplo» queda pago (inferido) también desde la app");
+ok(ev("escuelaDesdeRegistro({id:'node/202', nombre:'Colegio Declarado', nivel:'Primaria', tipo:'gratuita', tipoTexto:'Pública (gratuita)', tipoFuente:'osm', lat:19.48, lng:-99.24}).tipo") === "gratuita" &&
+   ev("escuelaDesdeRegistro({id:'node/202', nombre:'Colegio Declarado', nivel:'Primaria', tipo:'gratuita', tipoTexto:'Pública (gratuita)', tipoFuente:'osm', lat:19.48, lng:-99.24}).tipoFuente") === "osm",
+   "dataset: un tipo declarado (fuente «osm») NO lo sobrescribe la inferencia del nombre");
+ok(ev("escuelaDesdeRegistro({id:'node/203', nombre:'Telesecundaria 21', nivel:'Nivel sin especificar', tipo:'sindato', lat:19.48, lng:-99.24}).nivel") === "Secundaria" &&
+   ev("escuelaDesdeRegistro({id:'node/203', nombre:'Telesecundaria 21', nivel:'Nivel sin especificar', tipo:'sindato', lat:19.48, lng:-99.24}).nivelTexto") === "Secundaria (inferido)",
+   "dataset: un «Nivel sin especificar» llamado «Telesecundaria 21» se resuelve por nombre y se etiqueta");
+/* --- datos-extra manda sobre OSM y sobre la inferencia --- */
+const extraTipo = JSON.parse(ev("JSON.stringify(aplicarDatosExtra({id:'node/999', nombre:'Colegio Ejemplo', tipo:'pago', tipoTexto:'Particular (de pago)', tipoFuente:'osm'}, {'node/999': {tipo:'gratuita', fuente:'Prueba', fecha:'2026-11-22'}}))"));
+ok(extraTipo.tipo === "gratuita" && extraTipo.tipoFuente === "investigado" && extraTipo.tipoTexto === "Gratuita (dato investigado)",
+   "datos-extra: el tipo investigado manda sobre lo declarado en OSM y sobre lo inferido");
 ok(ev("filtrarPorRadio([{dist:0.5},{dist:4.9},{dist:5.1},{dist:19.7}], 5).length") === 2, "el filtro por radio descarta las escuelas lejanas");
 ok(ev("CENTRO_DEFECTO.lat") === 19.4785 && ev("CENTRO_DEFECTO.lng") === -99.2396 && ev("CENTRO_DEFECTO.etiqueta").includes("Instituto Juventud"), "el centro por defecto es el IJEM (19.4785, -99.2396)");
 ok(ev("CENTROS.ijem.lat") === 19.4785 && ev("CENTROS.ijem.lng") === -99.2396, "CENTROS.ijem tiene las coordenadas del IJEM");
@@ -211,7 +262,7 @@ const llenas = domFicha.window.document.querySelectorAll(".estrellas-ver .est.ll
 const medias = domFicha.window.document.querySelectorAll(".estrellas-ver .est.media").length;
 ok(llenas === 4 && medias === 1, "el pintado de estrellas de 4.6 da 4 llenas y 1 media");
 
-/* ============ 5. Mapa: círculo, capa CARTO y marcador del centro ============ */
+/* ============ 5. Mapa: círculo, teselas OSM y marcador del centro ============ */
 console.log("— Mapa —");
 const regMapa = { teselas: [], iconos: [], marcadores: [], radios: [] };
 const domMapa = await cargarPagina("mapa.html", "", {
@@ -223,8 +274,8 @@ const domMapa = await cargarPagina("mapa.html", "", {
 await esperar(() => regMapa.radios.includes(5000), "el mapa dibuja el círculo del radio de la búsqueda (5 km)");
 ok(!domMapa.window.document.getElementById("btnMiUbicacion"), "ya no existe el botón «Mi ubicación» en el Mapa");
 ok(domMapa.window.document.querySelectorAll("#selectorCentro .centro-btn").length === 2, "el Mapa trae el interruptor con los dos centros");
-ok(regMapa.teselas.length === 1 && regMapa.teselas[0].includes("basemaps.cartocdn.com") && regMapa.teselas[0].includes("rastertiles/voyager"),
-   "el mapa usa la capa de teselas CARTO Voyager, no el servidor de OSM");
+ok(regMapa.teselas.length === 1 && regMapa.teselas[0] === "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+   "el mapa usa las teselas estándar de OpenStreetMap (CARTO quedó fuera: su capa pública ahora exige API key)");
 const iconoCentro = regMapa.iconos.find(o => o.iconUrl === "assets/marcador-centro.png");
 ok(!!iconoCentro && iconoCentro.iconSize[0] === 44 && iconoCentro.iconSize[1] === 44,
    "el centro se marca con el logo «Soy Juventud» (assets/marcador-centro.png) a 44 px");
@@ -391,7 +442,7 @@ const domPrefs2 = await cargarPagina("index.html", "", {
   }
 });
 const wp2 = domPrefs2.window;
-await esperar(() => wp2.document.querySelector("#estadoBusqueda").textContent.includes("Se encontraron"),
+await esperar(() => wp2.document.querySelector("#estadoBusqueda").textContent.includes("Se encontr"),
    "la recarga corre la búsqueda inicial con las preferencias guardadas");
 ok(wp2.sessionStorage.getItem("serch_centro") === "kinder",
    "la preferencia fija el centro inicial de la sesión (serch_centro=kinder)");
@@ -449,6 +500,79 @@ ok(wsd.document.querySelector("#centroActivoTxt").textContent.includes("Institut
    "la línea de centro activo se pinta aunque no haya datos");
 ok(wsd.document.querySelectorAll("#lista .tarjeta-est").length === 0,
    "sin dataset no se pinta ninguna tarjeta: nada inventado");
+
+/* ============ 11. Resumen principal = conteo filtrado; tipo inferido en la lista ============ */
+console.log("— Resumen principal y tipo inferido (página) —");
+const domRes = await cargarPagina("index.html", "", {
+  beforeParse(win) { stubFetch(win); }
+});
+const wr = domRes.window;
+await esperar(() => wr.document.querySelectorAll("#lista .tarjeta-est").length >= 6, "el inicio pinta las 6 escuelas del radio");
+const resumenRes = () => wr.document.querySelector("#estadoBusqueda").textContent;
+const tarjetasRes = () => [...wr.document.querySelectorAll("#lista .tarjeta-est")];
+ok(resumenRes().includes("Se encontraron 6 escuelas"), "sin filtros, el resumen principal dice el total de la búsqueda (6)");
+wr.document.querySelector('.nivel-btn[data-nivel="Kinder"]').click();
+await new Promise(r => setTimeout(r, 120));
+ok(tarjetasRes().length === 2 && resumenRes().includes("Se encontraron 2 escuelas") && !resumenRes().includes("6 escuelas"),
+   "al filtrar por nivel Kinder, el resumen principal baja al conteo filtrado (2), igual que la lista");
+ok(wr.document.querySelector("#conteo").textContent.includes("2 resultado"), "el contador secundario coincide con el resumen principal (2)");
+wr.document.querySelector('.nivel-btn[data-nivel="Todas"]').click();
+wr.document.querySelector('.tipo-btn[data-tipo="gratuita"]').click();
+await new Promise(r => setTimeout(r, 120));
+ok(tarjetasRes().length === 4 && resumenRes().includes("Se encontraron 4 escuelas"),
+   "al filtrar por tipo Gratuitas, el resumen principal dice 4 (incluye las gratuitas INFERIDAS del nombre)");
+wr.document.querySelector('.tipo-btn[data-tipo="pago"]').click();
+await new Promise(r => setTimeout(r, 120));
+ok(tarjetasRes().length === 1 && resumenRes().includes("Se encontró 1 escuela") &&
+   tarjetasRes()[0].textContent.includes("Secundaria Técnica 45"),
+   "al filtrar por tipo De pago, el resumen principal dice 1 y la lista muestra esa escuela");
+wr.document.querySelector('.tipo-btn[data-tipo="todas"]').click();
+const inputBusc = wr.document.querySelector("#buscar");
+inputBusc.value = "benito";
+inputBusc.dispatchEvent(new wr.Event("input", { bubbles: true }));
+await new Promise(r => setTimeout(r, 120));
+ok(tarjetasRes().length === 1 && resumenRes().includes("Se encontró 1 escuela"),
+   "al filtrar por nombre, el resumen principal también refleja el conteo filtrado (1)");
+
+/* «Colegio Ejemplo» en el dataset (registro «sin dato»): la app lo
+   clasifica pago (inferido) y el filtro «De pago» lo encuentra. */
+const datasetColegio = {
+  generado: "2026-11-21", total: 8,
+  escuelas: fixtureDataset.escuelas.concat([{
+    id: "node/201", nombre: "Colegio Ejemplo", nivel: "Primaria",
+    tipo: "sindato", tipoTexto: "Tipo sin dato público", lat: 19.4805, lng: -99.2415
+  }])
+};
+const domCol = await cargarPagina("index.html", "", {
+  beforeParse(win) { stubFetch(win, { dataset: datasetColegio }); }
+});
+const wcol = domCol.window;
+await esperar(() => wcol.document.querySelectorAll("#lista .tarjeta-est").length >= 7, "el inicio con el dataset ampliado pinta 7 escuelas");
+const tarjetaCol = [...wcol.document.querySelectorAll("#lista .tarjeta-est")].find(t => t.textContent.includes("Colegio Ejemplo"));
+ok(!!tarjetaCol && tarjetaCol.textContent.includes("De pago (inferido)"),
+   "la tarjeta de «Colegio Ejemplo» muestra «De pago (inferido)», con la etiqueta de estimación");
+wcol.document.querySelector('.tipo-btn[data-tipo="pago"]').click();
+await new Promise(r => setTimeout(r, 120));
+const tarjetasPago = [...wcol.document.querySelectorAll("#lista .tarjeta-est")];
+ok(tarjetasPago.length === 2 && tarjetasPago.some(t => t.textContent.includes("Colegio Ejemplo")),
+   "el filtro «De pago» encuentra al «Colegio Ejemplo» inferido (junto a la de pago declarada)");
+
+/* datos-extra.json manda a nivel página: la Secundaria Técnica 45
+   (de pago declarada en el dataset) pasa a gratuita investigada. */
+const domExtra = await cargarPagina("index.html", "", {
+  beforeParse(win) {
+    stubFetch(win, { extra: { "node/103": { tipo: "gratuita", fuente: "https://ejemplo.edu.mx", fecha: "2026-11-22" } } });
+  }
+});
+const wex = domExtra.window;
+await esperar(() => wex.document.querySelectorAll("#lista .tarjeta-est").length >= 6, "el inicio (extra de tipo) pinta las escuelas");
+const tarjeta103 = [...wex.document.querySelectorAll("#lista .tarjeta-est")].find(t => t.textContent.includes("Secundaria Técnica 45"));
+ok(!!tarjeta103 && tarjeta103.textContent.includes("Gratuita (dato investigado)"),
+   "la tarjeta de la Técnica 45 muestra el tipo INVESTIGADO, que manda sobre el de pago declarado");
+wex.document.querySelector('.tipo-btn[data-tipo="gratuita"]').click();
+await new Promise(r => setTimeout(r, 120));
+ok([...wex.document.querySelectorAll("#lista .tarjeta-est")].some(t => t.textContent.includes("Secundaria Técnica 45")),
+   "con el filtro Gratuitas aparece la Técnica 45 gracias al dato investigado");
 
 console.log("\nResultado: " + pasadas + " pasadas, " + falladas + " falladas");
 servidor.close();
