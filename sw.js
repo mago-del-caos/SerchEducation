@@ -6,7 +6,7 @@
    (Overpass API y los mosaicos del mapa de OpenStreetMap) NO se
    cachean: las escuelas se consultan siempre en vivo.
    ============================================================ */
-const CACHE = "serch-v3";
+const CACHE = "serch-v4";
 const PROPIOS = [
   "./",
   "index.html",

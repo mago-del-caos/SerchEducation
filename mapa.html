@@ -72,6 +72,17 @@ if (guardadoIni && guardadoIni.origen &&
      no sirven con el centro activo; se vuelve a buscar. */
   resultados = [];
 }
+/* Preferencias guardadas (localStorage): al abrir, el mapa
+   respeta el centro — ya fijado como centro inicial de la
+   sesión al cargar app.js — y el radio guardados, por encima
+   de la última búsqueda de la sesión. Si esa búsqueda se hizo
+   con otro radio, se descarta y se vuelve a buscar con el
+   radio guardado, para que el círculo y las escuelas cuadren. */
+const prefsGuardadasMapa = cargarPreferencias();
+if (prefsGuardadasMapa) {
+  radioActual = prefsGuardadasMapa.radioKm;
+  if (guardadoIni && guardadoIni.radioKm !== radioActual) resultados = [];
+}
 
 /* Chips de radio del mapa. */
 const chips = $("#chipsRadioMapa");

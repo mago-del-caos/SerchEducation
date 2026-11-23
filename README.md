@@ -14,13 +14,29 @@ Buscador de escuelas — kinder, primaria, secundaria y preparatoria — desde l
 
 | Página | Qué hace |
 |---|---|
-| `index.html` | Buscador: selector de centro fijo (Instituto Juventud / Jardín de Niños), chips de radio (1–50 km), filtros por nivel con iconos (Kinder, Primaria, Secundaria, Preparatoria), filtro de tipo (Todas / Gratuitas / De pago / Sin dato), conteo y tarjetas ordenables por **cercanía** o por **mejor fama**. |
+| `index.html` | Buscador: selector de centro fijo (Instituto Juventud / Jardín de Niños), chips de radio (1–50 km), filtros por nivel con iconos (Kinder, Primaria, Secundaria, Preparatoria), filtro de tipo (Todas / Gratuitas / De pago / Sin dato), conteo y tarjetas ordenables por **cercanía** o por **mejor fama**. Junto a «Buscar escuelas», los botones **«Guardar preferencias»** y **«Restablecer»** (ver la sección siguiente). |
 | `mapa.html` | Leaflet con la marca del centro elegido (punto azul pulsante cuyo popup dice la etiqueta del centro), el **círculo del radio seleccionado** y marcadores por nivel (popup con nombre, nivel, tipo y distancia); el mismo selector de centro mueve la marca y el círculo y vuelve a buscar. |
 | `escuela.html` | Ficha de la escuela (vive de la búsqueda guardada en la sesión): nivel, tipo, costo, datos públicos de OSM y, si existen, los **datos investigados** con su sección de **Fama** (estrellas) y de **Eventos y promociones**. |
 | `eventos.html` | Dos bloques: los **eventos investigados** de `datos-extra.json`, agrupados por escuela con su fecha de consulta, y los **hallazgos de la vigilancia semanal** de `eventos.json`. |
 | `acerca.html` | Cómo funciona, fuentes y límites honestos de los datos. |
 
-Todas las páginas comparten menú desplegable, botón «Descargar la app» (PWA: `manifest.json` + `sw.js`, caché `serch-v3`) y el **asistente en burbuja**: un chatbot local, sin API, que responde solo con los resultados cargados («¿qué primarias hay cerca?», «¿cuáles son gratuitas?», «¿cuál es la más cercana?», «¿cuántas hay en 5 km?», «¿qué servicios tiene…?», «¿qué fama tiene…?», «¿cuál es la mejor valorada?», «¿qué eventos hay?»).
+Todas las páginas comparten menú desplegable, botón «Descargar la app» (PWA: `manifest.json` + `sw.js`, caché `serch-v4`) y el **asistente en burbuja**: un chatbot local, sin API, que responde solo con los resultados cargados («¿qué primarias hay cerca?», «¿cuáles son gratuitas?», «¿cuál es la más cercana?», «¿cuántas hay en 5 km?», «¿qué servicios tiene…?», «¿qué fama tiene…?», «¿cuál es la mejor valorada?», «¿qué eventos hay?»).
+
+## Preferencias guardadas
+
+El Inicio tiene dos botones junto a «Buscar escuelas»:
+
+- **«Guardar preferencias»** — deja fijos el **centro** (Instituto Juventud / Jardín de Niños), el **radio** (1–50 km), el **nivel**, el **tipo** y el **orden** tal como están en ese momento. Al guardar, el propio botón confirma con «Preferencias guardadas ✓» durante un par de segundos (sin ventanas emergentes).
+- **«Restablecer»** — borra lo guardado y aplica **en el acto** los valores por defecto (Instituto Juventud, 5 km, nivel Todas, tipo Todas, orden Cercanía), volviendo a buscar con ellos.
+
+**Dónde se guardan:** en el `localStorage` del navegador del visitante, clave `serch_preferencias`, como un objeto `{centro, radioKm, nivel, tipo, orden}`. Es persistente **entre sesiones** — a diferencia del centro de sesión (`serch_centro`) y los filtros de sesión (`serch_filtros`), que viven en `sessionStorage` y mueren al cerrar la pestaña. El **texto del buscador por nombre NO se guarda**: es una búsqueda del momento, no una preferencia.
+
+**Aplicación automática:** al abrir la app, si hay preferencias guardadas…
+
+1. El Inicio arranca con ellas: el interruptor de centro, los chips de radio y los botones de nivel, tipo y orden quedan reflejando lo guardado, y la **búsqueda inicial corre con esos valores** (mandan sobre los filtros de la sesión anterior).
+2. El **Mapa** respeta el centro guardado — este fija el centro inicial de la sesión al cargar la app — y el **radio** guardado: si la última búsqueda de la sesión se hizo con otro radio, se descarta y se vuelve a buscar con el de la preferencia, para que el círculo y las escuelas cuadren.
+
+Cada campo se valida al leerlo (centro contra los dos centros fijos, radio contra 1/3/5/10/20/50, nivel, tipo y orden contra sus valores posibles); lo que no cuadre cae a su valor por defecto. Sin preferencias guardadas, la app se comporta como siempre: valores por defecto y filtros recordados solo durante la sesión.
 
 ## Fuente de datos principal: OpenStreetMap (en vivo)
 
@@ -107,4 +123,4 @@ npm install   # solo la primera vez (instala jsdom)
 node test-serch.mjs
 ```
 
-La suite verifica: la consulta se construye con el radio pedido; el clasificador de nivel acierta los casos típicos (kinder por nombre, primaria, secundaria, preparatoria, `amenity=kindergarten`, sin especificar, CBTis); el tipo público/privado/sin dato; el filtro por radio descarta una escuela lejana; el centro por defecto es el IJEM y el otro centro fijo es el Jardín de Niños IJEM; **no existe ningún botón de GPS** («Usar mi ubicación» / «Mi ubicación») ni la función de geolocalización; **el interruptor de centro cambia el origen de la búsqueda y de las distancias** (una escuela pegada al IJEM pasa de ~0.1 km a ~2.5 km al intercambiar al Jardín, y la búsqueda queda guardada con las coordenadas del Jardín); la fusión con `datos-extra.json` muestra la fama en la ficha (4.6 → 4 estrellas llenas y 1 media) y en la tarjeta; el orden «Mejor fama» funciona; el bot responde la fama, la mejor valorada y los eventos; el círculo del mapa usa el radio elegido (5 km → 5000 m; al cambiar a 10 km, 10000 m); y `eventos.html` pinta `eventos.json` y los eventos investigados agrupados por escuela.
+La suite verifica: la consulta se construye con el radio pedido; el clasificador de nivel acierta los casos típicos (kinder por nombre, primaria, secundaria, preparatoria, `amenity=kindergarten`, sin especificar, CBTis); el tipo público/privado/sin dato; el filtro por radio descarta una escuela lejana; el centro por defecto es el IJEM y el otro centro fijo es el Jardín de Niños IJEM; **no existe ningún botón de GPS** («Usar mi ubicación» / «Mi ubicación») ni la función de geolocalización; **el interruptor de centro cambia el origen de la búsqueda y de las distancias** (una escuela pegada al IJEM pasa de ~0.1 km a ~2.5 km al intercambiar al Jardín, y la búsqueda queda guardada con las coordenadas del Jardín); la fusión con `datos-extra.json` muestra la fama en la ficha (4.6 → 4 estrellas llenas y 1 media) y en la tarjeta; el orden «Mejor fama» funciona; el bot responde la fama, la mejor valorada y los eventos; el círculo del mapa usa el radio elegido (5 km → 5000 m; al cambiar a 10 km, 10000 m); `eventos.html` pinta `eventos.json` y los eventos investigados agrupados por escuela; y **las preferencias guardadas**: guardar desde un estado no por defecto (Jardín, 10 km, Primaria, Gratuitas, Mejor fama) escribe la clave `serch_preferencias` sin el texto del buscador, una «recarga» con esa clave sembrada arranca con todos los controles reflejándola, el centro de sesión fijado por la preferencia y la búsqueda inicial hecha con radio y centro guardados (con Primaria + Gratuitas solo se ve la primaria gratuita del radio), y «Restablecer» borra la clave y vuelve a los valores por defecto aplicándolos en el acto.

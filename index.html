@@ -66,6 +66,8 @@
     </div>
     <div class="fila">
       <button id="btnBuscar" class="destacado"><img src="assets/icono-busqueda.png" alt=""> Buscar escuelas</button>
+      <button type="button" id="btnGuardarPrefs">💾 Guardar preferencias</button>
+      <button type="button" id="btnRestablecerPrefs">Restablecer</button>
       <button type="button" class="btn-instalar">📲 Descargar la app</button>
     </div>
     <div class="fila">
@@ -95,19 +97,34 @@ let nivelFiltro = "Todas";
 let tipoFiltro = "todas";
 let orden = "cerca";
 
-/* Filtros recordados durante la sesión. */
-try {
-  const f = JSON.parse(sessionStorage.getItem("serch_filtros") || "null");
-  if (f) {
-    if (RADIOS_KM.includes(f.radioKm)) radioKm = f.radioKm;
-    if (f.nivel) nivelFiltro = f.nivel;
-    if (f.tipo) tipoFiltro = f.tipo;
-    if (f.orden) orden = f.orden;
-  }
-} catch (e) { /* filtros por defecto */ }
+/* Arranque: si hay preferencias guardadas (localStorage, botón
+   «Guardar preferencias»), se aplican a todos los controles y
+   mandan sobre los filtros de la sesión; si no las hay, se usan
+   los filtros recordados durante la sesión (sessionStorage) o
+   los valores por defecto. El texto del buscador por nombre
+   nunca se guarda ni se restaura. */
+const prefsGuardadas = cargarPreferencias();
+if (prefsGuardadas) {
+  radioKm = prefsGuardadas.radioKm;
+  nivelFiltro = prefsGuardadas.nivel;
+  tipoFiltro = prefsGuardadas.tipo;
+  orden = prefsGuardadas.orden;
+  if (prefsGuardadas.centro !== centroActivo()) fijarCentro(prefsGuardadas.centro);
+} else {
+  try {
+    const f = JSON.parse(sessionStorage.getItem("serch_filtros") || "null");
+    if (f) {
+      if (RADIOS_KM.includes(f.radioKm)) radioKm = f.radioKm;
+      if (f.nivel) nivelFiltro = f.nivel;
+      if (f.tipo) tipoFiltro = f.tipo;
+      if (f.orden) orden = f.orden;
+    }
+  } catch (e) { /* filtros por defecto */ }
+}
 function guardarFiltros() {
   try { sessionStorage.setItem("serch_filtros", JSON.stringify({ radioKm, nivel: nivelFiltro, tipo: tipoFiltro, orden })); } catch (e) { /* sin sessionStorage */ }
 }
+if (prefsGuardadas) guardarFiltros(); // la sesión queda coherente con lo aplicado
 
 /* Chips de radio: 1, 3, 5, 10, 20 y 50 km. */
 const chipsRadio = $("#chipsRadio");
@@ -148,6 +165,20 @@ document.querySelectorAll(".orden-btn").forEach(b => {
   });
 });
 $("#buscar").addEventListener("input", render);
+
+/* Refleja en TODOS los controles el estado actual de los filtros
+   (lo usa «Restablecer»; al arrancar, cada control ya se pinta
+   desde las mismas variables al montarse). */
+function pintarControles() {
+  chipsRadio.querySelectorAll(".chip-radio").forEach(x =>
+    x.classList.toggle("activo", parseInt(x.dataset.radio, 10) === radioKm));
+  document.querySelectorAll("#filtroNivel .nivel-btn").forEach(x =>
+    x.classList.toggle("activo", x.dataset.nivel === nivelFiltro));
+  document.querySelectorAll(".tipo-btn").forEach(x =>
+    x.classList.toggle("activo", x.dataset.tipo === tipoFiltro));
+  document.querySelectorAll(".orden-btn").forEach(x =>
+    x.classList.toggle("activo", x.dataset.orden === orden));
+}
 
 function estado(html) { $("#estadoBusqueda").innerHTML = html; }
 
@@ -228,6 +259,36 @@ function render() {
 }
 
 $("#btnBuscar").addEventListener("click", buscar);
+
+/* ---------- Guardar / restablecer preferencias (localStorage) ----------
+   Guardar deja fijos centro, radio, nivel, tipo y orden en
+   localStorage («serch_preferencias») para que se apliquen solos
+   en cada apertura; la confirmación se ve en el propio botón,
+   sin alert. Restablecer borra lo guardado y aplica en el acto
+   los valores por defecto (IJEM, 5 km, Todas, Todas, Cercanía). */
+const btnGuardarPrefs = $("#btnGuardarPrefs");
+const textoGuardarPrefs = btnGuardarPrefs.innerHTML;
+let temporizadorPrefs = null;
+btnGuardarPrefs.addEventListener("click", () => {
+  guardarPreferencias({ centro: centroActivo(), radioKm, nivel: nivelFiltro, tipo: tipoFiltro, orden });
+  btnGuardarPrefs.textContent = "Preferencias guardadas ✓";
+  clearTimeout(temporizadorPrefs);
+  temporizadorPrefs = setTimeout(() => { btnGuardarPrefs.innerHTML = textoGuardarPrefs; }, 2000);
+});
+$("#btnRestablecerPrefs").addEventListener("click", () => {
+  borrarPreferencias();
+  radioKm = PREFERENCIAS_DEFECTO.radioKm;
+  nivelFiltro = PREFERENCIAS_DEFECTO.nivel;
+  tipoFiltro = PREFERENCIAS_DEFECTO.tipo;
+  orden = PREFERENCIAS_DEFECTO.orden;
+  if (centroActivo() !== PREFERENCIAS_DEFECTO.centro) {
+    fijarCentro(PREFERENCIAS_DEFECTO.centro);
+    montarSelectorCentro("#selectorCentro", () => buscar());
+  }
+  pintarControles();
+  guardarFiltros();
+  buscar();
+});
 /* Selector de centro fijo: al intercambiar entre el Instituto
    Juventud y el Jardín de Niños IJEM se vuelve a buscar con el
    mismo radio y las distancias se recalculan desde el centro

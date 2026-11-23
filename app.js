@@ -31,11 +31,62 @@ const CENTROS = {
   kinder: { lat: 19.49411, lng: -99.22223, etiqueta: "Jardín de Niños IJEM" }
 };
 const CENTRO_DEFECTO = CENTROS.ijem;   // el centro inicial es el IJEM
+const RADIOS_KM = [1, 3, 5, 10, 20, 50];
+const NIVELES = ["Kinder", "Primaria", "Secundaria", "Preparatoria", "Nivel sin especificar"];
+
+/* ============================================================
+   Preferencias guardadas (localStorage, clave
+   «serch_preferencias»): lo que el usuario deja fijo con el
+   botón «Guardar preferencias» del Inicio — centro, radio,
+   nivel, tipo y orden — para que se aplique SOLO al abrir la
+   app, sin volver a tocar los controles. A diferencia del
+   centro y los filtros de sesión (sessionStorage), esto
+   SOBREVIVE entre sesiones porque vive en localStorage.
+   El texto del buscador por nombre NO se guarda.
+   Cada campo se valida contra sus valores posibles; lo que
+   no cuadre cae al valor por defecto, nunca a un estado raro.
+   ============================================================ */
+const CLAVE_PREFERENCIAS = "serch_preferencias";
+const PREFERENCIAS_DEFECTO = { centro: "ijem", radioKm: 5, nivel: "Todas", tipo: "todas", orden: "cerca" };
+const TIPOS_FILTRO = ["todas", "gratuita", "pago", "sindato"];
+const ORDENES_FILTRO = ["cerca", "fama"];
+function sanearPreferencias(p) {
+  if (!p || typeof p !== "object") return null;
+  return {
+    centro: CENTROS[p.centro] ? p.centro : PREFERENCIAS_DEFECTO.centro,
+    radioKm: RADIOS_KM.includes(p.radioKm) ? p.radioKm : PREFERENCIAS_DEFECTO.radioKm,
+    nivel: (p.nivel === "Todas" || NIVELES.includes(p.nivel)) ? p.nivel : PREFERENCIAS_DEFECTO.nivel,
+    tipo: TIPOS_FILTRO.includes(p.tipo) ? p.tipo : PREFERENCIAS_DEFECTO.tipo,
+    orden: ORDENES_FILTRO.includes(p.orden) ? p.orden : PREFERENCIAS_DEFECTO.orden
+  };
+}
+function cargarPreferencias() {
+  try {
+    return sanearPreferencias(JSON.parse(localStorage.getItem(CLAVE_PREFERENCIAS) || "null"));
+  } catch (e) { return null; } // sin localStorage o JSON roto: no hay preferencias
+}
+function guardarPreferencias(p) {
+  const limpias = sanearPreferencias(p) || { ...PREFERENCIAS_DEFECTO };
+  try { localStorage.setItem(CLAVE_PREFERENCIAS, JSON.stringify(limpias)); return limpias; }
+  catch (e) { return null; } // sin localStorage: no se pudo guardar
+}
+function borrarPreferencias() {
+  try { localStorage.removeItem(CLAVE_PREFERENCIAS); } catch (e) { /* sin localStorage */ }
+}
+
 let claveCentro = (() => {
   try {
     const c = sessionStorage.getItem("serch_centro");
     if (c && CENTROS[c]) return c;
   } catch (e) { /* sin sessionStorage */ }
+  /* Sin centro de sesión, el centro inicial lo fija la
+     preferencia guardada: la sesión — y el Mapa al abrirse —
+     arrancan en el centro que el usuario guardó. */
+  const prefs = cargarPreferencias();
+  if (prefs) {
+    try { sessionStorage.setItem("serch_centro", prefs.centro); } catch (e) { /* sin sessionStorage */ }
+    return prefs.centro;
+  }
   return "ijem";
 })();
 let origen = { ...CENTROS[claveCentro] };
@@ -118,7 +169,6 @@ function endpointsOverpass() {
 function recordarEndpointOverpass(url) {
   try { sessionStorage.setItem(CLAVE_ENDPOINT_OVERPASS, url); } catch (e) { /* sin sessionStorage */ }
 }
-const RADIOS_KM = [1, 3, 5, 10, 20, 50];
 
 /* Consulta Overpass: escuelas y jardines de niños (nodos y vías,
    con centro geométrico) alrededor del origen, en metros. */
@@ -135,7 +185,6 @@ function construirConsultaOverpass(lat, lng, radioKm) {
 /* Nivel educativo. OJO: es una HEURÍSTICA a partir de las etiquetas
    de OSM (amenity, isced:level, school:level y el nombre en español);
    no es un dato oficial de la SEP. Cuando no se puede saber, se dice. */
-const NIVELES = ["Kinder", "Primaria", "Secundaria", "Preparatoria", "Nivel sin especificar"];
 function nivelDesdeEtiquetasNivel(tags) {
   const crudo = tags["isced:level"] || tags["school:level"] || "";
   if (!crudo) return null;
@@ -752,6 +801,7 @@ if (typeof module !== "undefined" && module.exports) {
     construirConsultaOverpass, clasificarNivel, clasificarTipo, normalizarEscuela,
     filtrarPorRadio, distanciaKm, normalizar, RADIOS_KM, aplicarDatosExtra, CENTRO_DEFECTO,
     CENTROS, fijarCentro, centroActivo, montarSelectorCentro,
-    pintarEstrellas, URLS_OVERPASS, endpointsOverpass
+    pintarEstrellas, URLS_OVERPASS, endpointsOverpass,
+    CLAVE_PREFERENCIAS, PREFERENCIAS_DEFECTO, cargarPreferencias, guardarPreferencias, borrarPreferencias
   };
 }
