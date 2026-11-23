@@ -146,7 +146,7 @@ ok(ev("clasificarTipo({amenity:'school'}).clave") === "sindato", "tipo: sin etiq
 ok(ev("filtrarPorRadio([{dist:0.5},{dist:4.9},{dist:5.1},{dist:19.7}], 5).length") === 2, "el filtro por radio descarta las escuelas lejanas");
 ok(ev("CENTRO_DEFECTO.lat") === 19.4785 && ev("CENTRO_DEFECTO.lng") === -99.2396 && ev("CENTRO_DEFECTO.etiqueta").includes("Instituto Juventud"), "el centro por defecto es el IJEM (19.4785, -99.2396)");
 ok(ev("CENTROS.ijem.lat") === 19.4785 && ev("CENTROS.ijem.lng") === -99.2396, "CENTROS.ijem tiene las coordenadas del IJEM");
-ok(ev("CENTROS.kinder.lat") === 19.49411 && ev("CENTROS.kinder.lng") === -99.22223 && ev("CENTROS.kinder.etiqueta").includes("Jardín de Niños"), "CENTROS.kinder es el Jardín de Niños IJEM (19.49411, -99.22223, Av. del Paseo 19)");
+ok(ev("CENTROS.kinder.lat") === 19.4941815 && ev("CENTROS.kinder.lng") === -99.2199265 && ev("CENTROS.kinder.etiqueta").includes("Jardín de Niños"), "CENTROS.kinder es el Jardín de Niños IJEM (19.4941815, -99.2199265, Av. del Paseo 19)");
 ok(ev("centroActivo()") === "ijem" && ev("origen.lat") === 19.4785, "el centro activo al arrancar es el IJEM y el origen parte de él");
 ok(w.document.querySelectorAll("#selectorCentro .centro-btn").length === 2, "el Inicio trae el interruptor con los dos centros");
 ok(w.document.querySelector('#selectorCentro .centro-btn[data-centro="ijem"]').classList.contains("activo"), "en el interruptor arranca activo «Instituto Juventud»");
@@ -331,7 +331,7 @@ function distanciaEnTarjeta(doc, nombre) {
 }
 /* «Jardín de Niños Las Flores» (fixture) está pegado al IJEM
    (19.479, -99.240): desde el IJEM son ~0.1 km; desde el Jardín
-   de Niños IJEM (19.49411, -99.22223) son ~2.5 km. */
+   de Niños IJEM (19.4941815, -99.2199265) son ~2.5 km. */
 const distDesdeIjem = distanciaEnTarjeta(wc.document, "Las Flores");
 ok(distDesdeIjem !== null && distDesdeIjem < 0.5, "desde el IJEM, Las Flores está a menos de 0.5 km (fixture: " + distDesdeIjem + " km)");
 wc.document.querySelector('#selectorCentro .centro-btn[data-centro="kinder"]').click();
@@ -343,11 +343,11 @@ const distDesdeKinder = distanciaEnTarjeta(wc.document, "Las Flores");
 ok(distDesdeKinder !== null && Math.abs(distDesdeKinder - 2.5) < 0.3, "la nueva distancia es ≈2.5 km (la del Jardín), no la del IJEM");
 ok(wc.sessionStorage.getItem("serch_centro") === "kinder", "el centro activo queda guardado en sessionStorage (serch_centro=kinder)");
 const guardadoCentro = JSON.parse(wc.sessionStorage.getItem("serch_resultados"));
-ok(guardadoCentro.origen.lat === 19.49411 && guardadoCentro.origen.lng === -99.22223 && guardadoCentro.centro === "kinder",
+ok(guardadoCentro.origen.lat === 19.4941815 && guardadoCentro.origen.lng === -99.2199265 && guardadoCentro.centro === "kinder",
    "la nueva búsqueda se hizo y se guardó desde las coordenadas del Jardín de Niños IJEM");
 ok(wc.document.querySelector("#estadoBusqueda").textContent.includes("Jardín de Niños IJEM"), "el estado de la búsqueda nombra el centro elegido");
 ok(wc.document.querySelector('#selectorCentro .centro-btn[data-centro="kinder"]').classList.contains("activo"), "el interruptor marca activo «Jardín de Niños» tras el cambio");
-ok(wc.eval("centroActivo()") === "kinder" && wc.eval("origen.lat") === 19.49411, "el origen en memoria es el Jardín de Niños IJEM");
+ok(wc.eval("centroActivo()") === "kinder" && wc.eval("origen.lat") === 19.4941815, "el origen en memoria es el Jardín de Niños IJEM");
 
 /* ============ 9. Preferencias guardadas (localStorage) ============ */
 console.log("— Preferencias guardadas —");
