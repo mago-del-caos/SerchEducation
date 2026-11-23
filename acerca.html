@@ -41,13 +41,13 @@
       </div>
       <div class="paso">
         <img src="assets/icono-preparatoria.png" alt="">
-        <div><strong>2. El nivel se infiere, no se decreta</strong>
-        <span>OpenStreetMap no siempre dice si una escuela es kinder, primaria, secundaria o preparatoria. Serch Education lo infiere de las etiquetas del mapa (tipo de lugar, niveles ISCED y el nombre en español: «jardín de niños», «CBTis», «Conalep»…). Es una <strong>heurística</strong>: cuando no se puede saber, la ficha dice «Nivel sin especificar» en vez de adivinar.</span></div>
+        <div><strong>2. El nivel se triangula, no se decreta</strong>
+        <span>El nivel de cada escuela se busca por <strong>triangulación</strong>: primero manda el <strong>directorio oficial de la SEP</strong> (su catálogo de centros de trabajo, cruzado por nombre y cercanía; la ficha guarda la CCT); si la escuela no cruza, manda lo <strong>declarado en OpenStreetMap</strong> (tipo de lugar y niveles ISCED); y si tampoco, se <strong>infiere del nombre</strong> («jardín de niños», «CBTis», «Conalep»…) y la tarjeta lo etiqueta «(inferido)». Lo que ninguna fuente resuelve queda «Nivel sin especificar»: residuo honesto, sin rellenar.</span></div>
       </div>
       <div class="paso">
         <img src="assets/icono-gratuitas.png" alt="">
-        <div><strong>3. Gratuita o de pago, solo si el mapa lo dice</strong>
-        <span>El tipo sale de las etiquetas públicas del operador (<em>operator:type</em>) o de la etiqueta <em>fee</em>. Si no hay etiqueta, verás «Tipo sin dato público»: que no traiga la etiqueta <strong>no</strong> significa que cobre.</span></div>
+        <div><strong>3. Gratuita o de pago: declarado, inferido o investigado</strong>
+        <span>El tipo sigue una precedencia y siempre dice su fuente: primero el <strong>dato investigado</strong>; luego lo <strong>declarado</strong> en las etiquetas públicas del mapa (<em>operator:type</em> o <em>fee</em>) y el sostenimiento del directorio de la SEP; y si nadie declara nada — el caso de casi todas las escuelas —, una <strong>inferencia conservadora por el nombre</strong> («Colegio…» o «Montessori» → «De pago (inferido)»; «Escuela Primaria…», «Secundaria Técnica», «CENDI», «CBTIS», «CONALEP» → «Gratuita (inferido)»). Es una estimación etiquetada, no un dato oficial: de «Instituto» a secas no se infiere nada, y ante la duda verás «Tipo sin dato público» — que no se sepa <strong>no</strong> significa que cobre.</span></div>
       </div>
       <div class="paso">
         <img src="assets/icono-costos.png" alt="">
@@ -73,12 +73,12 @@
       <div class="paso">
         <img src="assets/icono-beneficios.png" alt="">
         <div><strong>Fuentes</strong>
-        <span>© OpenStreetMap y colaboradores (licencia ODbL): el registro de la app se genera desde ahí y se actualiza cada semana; mapa © OpenStreetMap · © CARTO. Los datos investigados traen su propia fuente y fecha en cada ficha.</span></div>
+        <span>© OpenStreetMap y colaboradores (licencia ODbL): el registro de la app se genera desde ahí y se actualiza cada semana; el mapa usa las teselas estándar de OpenStreetMap. Los datos investigados traen su propia fuente y fecha en cada ficha.</span></div>
       </div>
       <div class="paso">
         <img src="assets/icono-busqueda.png" alt="">
         <div><strong>Lo que puede fallar</strong>
-        <span>OpenStreetMap es un mapa comunitario: puede faltar una escuela nueva, sobrar una cerrada o faltar su sitio web. La clasificación de nivel es heurística y la de tipo depende de etiquetas que muchas escuelas no tienen. La fama investigada refleja las valoraciones públicas de su fuente en la fecha de consulta, no una evaluación de Serch Education.</span></div>
+        <span>OpenStreetMap es un mapa comunitario: puede faltar una escuela nueva, sobrar una cerrada o faltar su sitio web. El nivel y el tipo marcados «(inferido)» son estimaciones a partir del nombre y pueden equivocarse; el cruce con la SEP depende de que el nombre coincida en ambos registros. La fama investigada refleja las valoraciones públicas de su fuente en la fecha de consulta, no una evaluación de Serch Education.</span></div>
       </div>
       <div class="paso">
         <img src="assets/icono-kinder.png" alt="">

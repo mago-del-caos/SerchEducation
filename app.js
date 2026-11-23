@@ -205,28 +205,111 @@ function nivelDesdeEtiquetasNivel(tags) {
   }
   return null; // varios niveles en la etiqueta: no se adivina
 }
-function clasificarNivel(tags) {
-  if (tags.amenity === "kindergarten") return "Kinder";
-  const porEtiqueta = nivelDesdeEtiquetasNivel(tags);
-  if (porEtiqueta) return porEtiqueta;
-  // Heurística por el nombre en español (etiqueta como tal en el código).
-  const n = " " + normalizar(tags.name || "") + " ";
-  if (/jardin de ninos|jardin de infantes|kinder|preescolar|estancia infantil|cendi|caic|guarderia/.test(n)) return "Kinder";
-  if (/preparatoria|bachillerato|bachilleres|cch|cbtis|cetis|conalep|cobach| prepa /.test(n)) return "Preparatoria";
+/* Nivel por el NOMBRE (inferido): patrones del sistema educativo
+   mexicano, extendidos con las siglas de los subsistemas
+   (CBTIS, CECyT, CONALEP, COBACH, EPO…). Devuelve el nivel o
+   null. Es una ESTIMACIÓN etiquetada «inferido». Espejo fiel en
+   tools/generar-datos.py (triangulación: SEP > OSM > nombre). */
+function nivelDesdeNombre(nombre) {
+  const n = " " + normalizar(nombre || "") + " ";
+  if (/jardin de ninos|jardin de infantes|kinder|preescolar|preprimaria|estancia infantil|cendi|caic|guarderia/.test(n)) return "Kinder";
+  if (/preparatoria|bachillerato|bachilleres|cch|cbtis|cbta|cetis|cecyt|conalep|cobach|emsad| prepa /.test(n)) return "Preparatoria";
+  if (/\bepo\s*\d/.test(n)) return "Preparatoria"; // «EPO 139» y similares
   if (/secundaria|telesecundaria/.test(n)) return "Secundaria";
   if (/primaria/.test(n)) return "Primaria";
-  return "Nivel sin especificar";
+  return null;
+}
+/* Nivel con su FUENTE: lo declarado en OSM (amenity o etiquetas
+   isced:level / school:level) manda sobre el nombre («osm»); el
+   nombre etiqueta «inferido»; sin nada, «Nivel sin especificar»
+   y fuente null (residuo honesto). En el dataset, la SEP puede
+   además fijar el nivel con fuente «sep» (ver generar-datos.py). */
+function clasificarNivelConFuente(tags) {
+  if (tags.amenity === "kindergarten") return { nivel: "Kinder", fuente: "osm" };
+  const porEtiqueta = nivelDesdeEtiquetasNivel(tags);
+  if (porEtiqueta) return { nivel: porEtiqueta, fuente: "osm" };
+  const porNombre = nivelDesdeNombre(tags.name || "");
+  if (porNombre) return { nivel: porNombre, fuente: "inferido" };
+  return { nivel: "Nivel sin especificar", fuente: null };
+}
+function clasificarNivel(tags) { return clasificarNivelConFuente(tags).nivel; }
+/* Texto visible del nivel: solo lo inferido lleva etiqueta. */
+function textoNivel(nivel, fuente) {
+  return fuente === "inferido" ? nivel + " (inferido)" : nivel;
 }
 
-/* Pago o gratuita, SOLO desde etiquetas públicas de OSM. */
+/* Texto visible del tipo según su clave y su FUENTE. La fuente
+   siempre viaja con el dato (campo tipoFuente de la escuela):
+   «investigado» (datos-extra.json) > «osm» (declarado en las
+   etiquetas públicas) > «inferido» (estimación por el nombre). */
+function textoTipo(clave, fuente) {
+  if (clave === "pago") {
+    if (fuente === "inferido") return "De pago (inferido)";
+    if (fuente === "investigado") return "De pago (dato investigado)";
+    return "Particular (de pago)";
+  }
+  if (clave === "gratuita") {
+    if (fuente === "inferido") return "Gratuita (inferido)";
+    if (fuente === "investigado") return "Gratuita (dato investigado)";
+    return "Pública (gratuita)";
+  }
+  return "Tipo sin dato público";
+}
+
+/* Inferencia de tipo por el NOMBRE, conservadora, para cuando
+   OpenStreetMap no declara el sostenimiento (que es lo común:
+   casi ninguna escuela trae operator:type ni fee, y sin esto el
+   filtro «De pago» devolvía cero en zonas llenas de colegios).
+   Devuelve "gratuita", "pago" o null (ante la duda, sin dato).
+   Es una ESTIMACIÓN etiquetada como «inferido», no un dato
+   oficial. Espejo fiel en tools/generar-datos.py.
+   OJO con las trampas mexicanas: «Colegio de Bachilleres» y el
+   «Colegio Nacional de Educación…» (CONALEP) son PÚBLICOS, y de
+   «Instituto» a secas no se infiere nada (hay institutos
+   públicos y privados). */
+function inferirTipoPorNombre(nombre) {
+  const n = normalizar(nombre || "").trim();
+  if (!n) return null;
+  /* 1) Sistema público: siglas y nombres oficiales inconfundibles. */
+  if (/\b(cendi|conafe|cbtis|cetis|conalep|cobach)\b/.test(n)) return "gratuita";
+  if (n.includes("colegio de bachilleres")) return "gratuita";
+  if (n.includes("colegio nacional de educacion")) return "gratuita"; // CONALEP, nombre extendido
+  if (n.includes("colegio de educacion profesional")) return "gratuita"; // CONALEP estatal (p. ej. el del Estado de México, sin «Nacional»)
+  if (n.includes("colegio de ciencias y humanidades")) return "gratuita"; // CCH (UNAM)
+  if (/\b(unam|ipn|uaem)\b/.test(n) || n.includes("instituto politecnico nacional")) return "gratuita";
+  if (n.startsWith("escuela preparatoria oficial") || n.startsWith("preparatoria oficial")) return "gratuita";
+  if (/\bepo\s*\d/.test(n)) return "gratuita"; // «EPO 139», «EPOAN» no: solo EPO + número
+  if (n.includes("secundaria tecnica") || n.includes("secundaria general") || n.includes("telesecundaria")) return "gratuita";
+  if (n.startsWith("escuela primaria") || n.startsWith("escuela secundaria")) return "gratuita";
+  if (n.startsWith("primaria ") || n.startsWith("secundaria ")) return "gratuita";
+  if (n.includes("escuela nacional preparatoria") || /\bvocacional\b/.test(n)) return "gratuita";
+  /* 2) Marcas privadas claras. */
+  if (/\b(montessori|waldorf)\b/.test(n)) return "pago";
+  if (/\b(school|college|academy|kids|liceo)\b/.test(n)) return "pago";
+  if (n === "colegio" || n.startsWith("colegio ")) return "pago";
+  /* 3) Nombre oficial de plantel público con nombre de prócer o
+     maestro («Jardín de Niños Juan Escutia», «Preescolar…»): el
+     patrón con el que la SEP nombra sus planteles. Va después de
+     las marcas privadas: un «Preescolar Montessori» es de pago. */
+  if (n.startsWith("jardin de ninos") || n.startsWith("preescolar")) return "gratuita";
+  return null;
+}
+
+/* Pago o gratuita. Precedencia de la fuente: (2) lo DECLARADO en
+   las etiquetas públicas de OSM (operator:type / fee) manda;
+   (3) si el mapa no declara nada, se intenta la inferencia por
+   el nombre, etiquetada. La precedencia (1), el dato investigado
+   de datos-extra.json, se aplica encima en aplicarDatosExtra. */
 function clasificarTipo(tags) {
   const ot = normalizar(tags["operator:type"] || "");
-  if (ot === "public") return { clave: "gratuita", texto: "Pública (gratuita)" };
-  if (ot === "private") return { clave: "pago", texto: "Particular (de pago)" };
+  if (ot === "public") return { clave: "gratuita", texto: textoTipo("gratuita", "osm"), fuente: "osm" };
+  if (ot === "private") return { clave: "pago", texto: textoTipo("pago", "osm"), fuente: "osm" };
   const fee = normalizar(tags.fee || "");
-  if (fee === "yes") return { clave: "pago", texto: "De pago (etiqueta fee=yes)" };
-  if (fee === "no") return { clave: "gratuita", texto: "Gratuita (etiqueta fee=no)" };
-  return { clave: "sindato", texto: "Tipo sin dato público" };
+  if (fee === "yes") return { clave: "pago", texto: "De pago (etiqueta fee=yes)", fuente: "osm" };
+  if (fee === "no") return { clave: "gratuita", texto: "Gratuita (etiqueta fee=no)", fuente: "osm" };
+  const inf = inferirTipoPorNombre(tags.name || "");
+  if (inf) return { clave: inf, texto: textoTipo(inf, "inferido"), fuente: "inferido" };
+  return { clave: "sindato", texto: textoTipo("sindato", null), fuente: null };
 }
 
 function direccionDe(tags) {
@@ -266,12 +349,17 @@ function normalizarEscuela(el) {
   const lng = typeof el.lon === "number" ? el.lon : (el.center && el.center.lon);
   if (typeof lat !== "number" || typeof lng !== "number") return null;
   const tipo = clasificarTipo(tags);
+  const niv = clasificarNivelConFuente(tags);
   return {
     id: el.type + "/" + el.id,
     nombre: tags.name || "Escuela sin nombre en OpenStreetMap",
-    nivel: clasificarNivel(tags),
+    nivel: niv.nivel,
+    nivelFuente: niv.fuente, // "osm" | "inferido" | null
+    nivelTexto: textoNivel(niv.nivel, niv.fuente),
+    cct: null, // la SEP solo cruza en el dataset (generar-datos.py)
     tipo: tipo.clave,
     tipoTexto: tipo.texto,
+    tipoFuente: tipo.fuente, // "osm" | "inferido" | null (sin dato)
     lat, lng,
     dist: null, // se calcula contra el origen al buscar
     direccion: direccionDe(tags),
@@ -290,8 +378,10 @@ function filtrarPorRadio(escuelas, radioKm) {
 /* ---------- Capa de datos investigados (datos-extra.json) ----------
    Archivo del propio repo, investigado a mano por la asistente para
    las escuelas de la zona del IJEM. Clave: el id de OSM («node/123»
-   o «way/456»). Campos opcionales: costos (texto), beneficios
-   (lista), servicios (lista), fuente (URL) y fecha (AAAA-MM-DD).
+   o «way/456»). Campos opcionales: tipo («gratuita» | «pago»:
+   manda sobre OSM y sobre la inferencia), costos (texto),
+   beneficios (lista), servicios (lista), fuente (URL) y fecha
+   (AAAA-MM-DD).
    Estos datos tienen PRIORIDAD sobre lo de OpenStreetMap al pintar
    tarjetas y ficha, y se marcan «Dato investigado» con su fuente y
    fecha; lo de OSM queda como registro público. */
@@ -309,6 +399,9 @@ function aplicarDatosExtra(e, extra) {
   const d = extra && typeof extra === "object" ? extra[e.id] : null;
   if (!d || typeof d !== "object") return e;
   const inv = {};
+  /* El tipo investigado («gratuita» | «pago») es la precedencia
+     (1): manda sobre lo declarado en OSM y sobre lo inferido. */
+  if (d.tipo === "gratuita" || d.tipo === "pago") inv.tipo = d.tipo;
   if (typeof d.costos === "string" && d.costos.trim()) inv.costos = d.costos.trim();
   if (Array.isArray(d.beneficios)) inv.beneficios = d.beneficios.filter(x => typeof x === "string" && x.trim());
   if (Array.isArray(d.servicios)) inv.servicios = d.servicios.filter(x => typeof x === "string" && x.trim());
@@ -334,7 +427,12 @@ function aplicarDatosExtra(e, extra) {
       };
     }
   }
-  if (inv.costos || (inv.beneficios && inv.beneficios.length) || (inv.servicios && inv.servicios.length) ||
+  if (inv.tipo) {
+    e.tipo = inv.tipo;
+    e.tipoFuente = "investigado";
+    e.tipoTexto = textoTipo(inv.tipo, "investigado");
+  }
+  if (inv.tipo || inv.costos || (inv.beneficios && inv.beneficios.length) || (inv.servicios && inv.servicios.length) ||
       (inv.eventos && inv.eventos.length) || inv.valoracion) {
     e.investigado = inv;
   }
@@ -366,11 +464,6 @@ function iconoDeNivel(nivel) {
    del service worker, así que la app funciona sin depender de
    que Overpass responda en el momento de la visita.
    ============================================================ */
-const TIPO_TEXTO = {
-  gratuita: "Pública (gratuita)",
-  pago: "Particular (de pago)",
-  sindato: "Tipo sin dato público"
-};
 let baseEscuelas = null;     // registro completo ya normalizado (dist: null)
 let datasetInfo = null;      // {generado, total, parcial}
 let promesaDataset = null;   // carga en curso (se comparte entre páginas)
@@ -384,12 +477,38 @@ function escuelaDesdeRegistro(reg) {
   if (reg.website) servicios.push({ etiqueta: "Sitio web", valor: reg.website });
   if (reg.telefono) servicios.push({ etiqueta: "Teléfono", valor: reg.telefono });
   if (reg.direccion) servicios.push({ etiqueta: "Dirección", valor: reg.direccion });
+  /* Tipo y su fuente: el registro ya los trae del generador. Si un
+     registro quedó «sin dato» (o viene de un dataset anterior a la
+     inferencia), se intenta aquí la MISMA inferencia por nombre
+     que usa el generador, para que app y dataset nunca discrepen. */
+  let tipo = reg.tipo || "sindato";
+  let tipoFuente = reg.tipoFuente || null;
+  let tipoTexto = reg.tipoTexto || null;
+  if (tipo === "sindato") {
+    const inf = inferirTipoPorNombre(reg.nombre);
+    if (inf) { tipo = inf; tipoFuente = "inferido"; tipoTexto = null; }
+  }
+  if (!tipoFuente && tipo !== "sindato") tipoFuente = "osm"; // registro sin fuente explícita: venía de etiquetas OSM
+  if (!tipoTexto) tipoTexto = textoTipo(tipo, tipoFuente);
+  /* Nivel y su fuente (triangulación del generador: SEP > OSM >
+     nombre). Si el registro quedó «Nivel sin especificar», se
+     intenta la inferencia por nombre con las mismas reglas. */
+  let nivel = reg.nivel || "Nivel sin especificar";
+  let nivelFuente = reg.nivelFuente || null;
+  if (nivel === "Nivel sin especificar" && !nivelFuente) {
+    const infN = nivelDesdeNombre(reg.nombre);
+    if (infN) { nivel = infN; nivelFuente = "inferido"; }
+  }
   return {
     id: reg.id,
     nombre: reg.nombre,
-    nivel: reg.nivel,
-    tipo: reg.tipo,
-    tipoTexto: reg.tipoTexto || TIPO_TEXTO[reg.tipo] || "Tipo sin dato público",
+    nivel: nivel,
+    nivelFuente: nivelFuente, // "sep" | "osm" | "inferido" | null
+    nivelTexto: textoNivel(nivel, nivelFuente),
+    cct: reg.cct || null,
+    tipo: tipo,
+    tipoTexto: tipoTexto,
+    tipoFuente: tipoFuente,
     lat: reg.lat, lng: reg.lng,
     dist: null, // se calcula contra el centro activo al buscar
     direccion: reg.direccion || null,
@@ -736,7 +855,7 @@ function botRespuesta(textoCrudo) {
       if (!partes.length) {
         return "De <strong>" + esc(e.nombre) + "</strong> no hay servicios ni beneficios publicados " +
           "ni en OpenStreetMap ni en los datos investigados: sin dato público. Lo que sí sé: es " +
-          esc(e.nivel) + ", " + esc(e.tipoTexto.toLowerCase()) + botDistanciaTxt(e) + ".";
+          esc(e.nivelTexto || e.nivel) + ", " + esc(e.tipoTexto.toLowerCase()) + botDistanciaTxt(e) + ".";
       }
       return "Esto es lo que se sabe de <strong>" + esc(e.nombre) + "</strong>: " + partes.join(" ") +
         "Lo que no aparece aquí es sin dato público.";
@@ -747,22 +866,22 @@ function botRespuesta(textoCrudo) {
   if (/(cerca|cercana|cercano|proxim)/.test(t)) {
     const e = lista[0]; // los resultados ya vienen ordenados por cercanía
     return "La escuela más cercana desde " + esc(origen.etiqueta) +
-      " es <strong>" + esc(e.nombre) + "</strong> (" + esc(e.nivel) + ", " + esc(e.tipoTexto) + ")" +
+      " es <strong>" + esc(e.nombre) + "</strong> (" + esc(e.nivelTexto || e.nivel) + ", " + esc(e.tipoTexto) + ")" +
       botDistanciaTxt(e) + ".";
   }
 
   /* --- Gratuitas / de pago --- */
   if (/(gratis|gratuita|publica)/.test(t)) {
     const g = lista.filter(e => e.tipo === "gratuita");
-    if (!g.length) return "En los resultados cargados" + radioTxt + " ninguna escuela trae etiqueta de pública o gratuita en OpenStreetMap. Ojo: que no traiga la etiqueta no significa que cobre; muchas simplemente no tienen el dato publicado.";
-    return "Con etiqueta de <strong>gratuita</strong> hay " + g.length + radioTxt + ". Las más cercanas: " +
-      g.slice(0, 5).map(e => "<strong>" + esc(e.nombre) + "</strong> (" + esc(e.nivel) + ")" + botDistanciaTxt(e)).join(", ") + ".";
+    if (!g.length) return "En los resultados cargados" + radioTxt + " ninguna escuela está clasificada como pública o gratuita: ni OpenStreetMap lo declara ni su nombre permite inferirlo. Ojo: que no se sepa no significa que cobre; muchas simplemente no tienen el dato publicado.";
+    return "Clasificadas como <strong>gratuitas</strong> (declaradas en OpenStreetMap o inferidas del nombre) hay " + g.length + radioTxt + ". Las más cercanas: " +
+      g.slice(0, 5).map(e => "<strong>" + esc(e.nombre) + "</strong> (" + esc(e.nivelTexto || e.nivel) + ")" + botDistanciaTxt(e)).join(", ") + ".";
   }
   if (/(pago|particular|privada|cuesta|costo)/.test(t)) {
     const p = lista.filter(e => e.tipo === "pago");
-    if (!p.length) return "En los resultados cargados ninguna escuela trae etiqueta de particular o de pago. Los costos casi nunca se publican en OpenStreetMap: si no hay dato, la ficha dice «sin dato público — consúltalo con la escuela».";
-    return "Con etiqueta de <strong>particular (de pago)</strong> hay " + p.length + radioTxt + ". Las más cercanas: " +
-      p.slice(0, 5).map(e => "<strong>" + esc(e.nombre) + "</strong> (" + esc(e.nivel) + ")" + botDistanciaTxt(e)).join(", ") +
+    if (!p.length) return "En los resultados cargados ninguna escuela está clasificada como de pago: ni OpenStreetMap lo declara ni su nombre (p. ej. «Colegio…», «Montessori») permite inferirlo. Los costos casi nunca se publican: si no hay dato, la ficha dice «sin dato público — consúltalo con la escuela».";
+    return "Clasificadas como <strong>de pago</strong> (declaradas en OpenStreetMap o inferidas del nombre) hay " + p.length + radioTxt + ". Las más cercanas: " +
+      p.slice(0, 5).map(e => "<strong>" + esc(e.nombre) + "</strong> (" + esc(e.nivelTexto || e.nivel) + ")" + botDistanciaTxt(e)).join(", ") +
       ". El monto del costo no se publica en OpenStreetMap: consúltalo con cada escuela.";
   }
 
@@ -792,7 +911,7 @@ function botRespuesta(textoCrudo) {
   /* --- Una escuela nombrada, en general --- */
   const e = botBuscarEscuela(t);
   if (e) {
-    return "<strong>" + esc(e.nombre) + "</strong>: " + esc(e.nivel) + ", " + esc(e.tipoTexto) +
+    return "<strong>" + esc(e.nombre) + "</strong>: " + esc(e.nivelTexto || e.nivel) + ", " + esc(e.tipoTexto) +
       botDistanciaTxt(e) + (e.direccion ? ", " + esc(e.direccion) : "") +
       ". Su costo: " + (e.investigado && e.investigado.costos
         ? esc(e.investigado.costos) + " (dato investigado)"
@@ -892,7 +1011,8 @@ document.addEventListener("DOMContentLoaded", chatCrear);
 /* Exportación para las pruebas con node/jsdom (en el navegador no hace nada). */
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
-    construirConsultaOverpass, clasificarNivel, clasificarTipo, normalizarEscuela,
+    construirConsultaOverpass, clasificarNivel, clasificarNivelConFuente, nivelDesdeNombre,
+    textoNivel, clasificarTipo, inferirTipoPorNombre, textoTipo, normalizarEscuela,
     filtrarPorRadio, distanciaKm, normalizar, RADIOS_KM, aplicarDatosExtra, CENTRO_DEFECTO,
     CENTROS, fijarCentro, centroActivo, montarSelectorCentro,
     pintarEstrellas, URLS_OVERPASS, endpointsOverpass,

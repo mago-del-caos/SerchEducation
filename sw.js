@@ -5,12 +5,14 @@
    la app se pueda instalar y abra rápido — incluido el registro
    de escuelas (escuelas.json), la fuente primaria de datos.
    Los servicios externos (Overpass API, solo del botón opcional
-   «Actualizar en vivo», y los mosaicos del mapa de CARTO) NO se
+   «Actualizar en vivo», y las teselas del mapa de OpenStreetMap) NO se
    cachean aquí.
-   serch-v6: ruptura limpia de las cachés mezcladas que dejaron
-   las subidas rápidas de versiones anteriores.
+   serch-v7: resumen principal siempre con el conteo filtrado,
+   tipo con inferencia etiquetada por nombre, nivel triangulado
+   (SEP / OSM / nombre) con su fuente, y teselas del mapa de
+   vuelta a OpenStreetMap estándar (CARTO ahora exige API key).
    ============================================================ */
-const CACHE = "serch-v6";
+const CACHE = "serch-v7";
 const PROPIOS = [
   "./",
   "index.html",

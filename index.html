@@ -31,7 +31,7 @@
   </nav>
 </header>
 <main>
-  <div class="aviso-datos">La app trae un <strong>registro propio de escuelas</strong> (datos de OpenStreetMap) que se actualiza <strong>cada semana</strong>: la búsqueda filtra ese registro en tu teléfono y no depende de consultar el mapa en el momento. El nivel y el tipo (gratuita o de pago) se infieren de las etiquetas públicas del mapa; los costos casi nunca se publican: si no hay dato, la ficha dice «sin dato público» y hay que consultarlo con la escuela. Si quieres datos al minuto, el botón «Actualizar en vivo» intenta refrescar desde OpenStreetMap.</div>
+  <div class="aviso-datos">La app trae un <strong>registro propio de escuelas</strong> (datos de OpenStreetMap) que se actualiza <strong>cada semana</strong>: la búsqueda filtra ese registro en tu teléfono y no depende de consultar el mapa en el momento. El nivel y el tipo (gratuita o de pago) se infieren de las etiquetas públicas del mapa y del nombre de cada escuela, siempre marcados como «inferido» cuando son estimación; los costos casi nunca se publican: si no hay dato, la ficha dice «sin dato público» y hay que consultarlo con la escuela. Si quieres datos al minuto, el botón «Actualizar en vivo» intenta refrescar desde OpenStreetMap.</div>
 
   <section class="panel" aria-label="Controles de búsqueda">
     <div class="fila">
@@ -203,15 +203,37 @@ function pintarControles() {
 
 function estado(html) { $("#estadoBusqueda").innerHTML = html; }
 
+/* Resumen principal (#estadoBusqueda): lo pinta render() en CADA
+   repintado con el conteo FILTRADO visible — el mismo número que
+   la lista —, no solo tras buscar. (Antes el resumen se escribía
+   una sola vez en buscar() con el total sin filtrar y se quedaba
+   viejo al tocar nivel, tipo o nombre: la lista bajaba y el
+   encabezado no.) ultimoResumen guarda el contexto de la última
+   carga exitosa: radio, total sin filtrar y fuente. */
+let ultimoResumen = null;
+function pintarResumen(visibles) {
+  if (!ultimoResumen) return;
+  const total = ultimoResumen.total;
+  let html = (visibles === 1 ? "Se encontró <strong>1 escuela</strong>" : "Se encontraron <strong>" + visibles + " escuelas</strong>") +
+    " en " + ultimoResumen.radioKm + " km alrededor de " + esc(origen.etiqueta) +
+    (visibles !== total ? " (con los filtros aplicados; " + total + " en ese radio sin filtrar)" : "") + ".";
+  if (ultimoResumen.fuente === "vivo") {
+    html += "<br>Datos <strong>actualizados en vivo</strong> desde OpenStreetMap. Si cambias de centro o de radio, se vuelve al registro semanal.";
+  } else {
+    const info = infoDataset();
+    if (info) html += "<br>Datos del " + esc(info.generado) + " · " + info.total + " escuelas en el registro · se actualiza cada semana" + (info.parcial ? " · <strong>registro parcial</strong>" : "") + ".";
+  }
+  estado(html);
+}
+
 async function buscar() {
   estado("Cargando el registro de escuelas y filtrando en <strong>" + radioKm + " km</strong> alrededor de " + esc(origen.etiqueta) + "…");
   $("#btnBuscar").disabled = true;
   try {
     await buscarEscuelas(radioKm);
-    const info = infoDataset();
-    estado("Se encontraron <strong>" + resultados.length + " escuelas</strong> en " + radioKm + " km alrededor de " + esc(origen.etiqueta) + "." +
-      (info ? "<br>Datos del " + esc(info.generado) + " · " + info.total + " escuelas en el registro · se actualiza cada semana" + (info.parcial ? " · <strong>registro parcial</strong>" : "") + "." : ""));
+    ultimoResumen = { radioKm, total: resultados.length, fuente: "dataset" };
   } catch (e) {
+    ultimoResumen = null; // sin carga exitosa, render() no pisa el mensaje de error
     estado('<span class="error">No se pudo cargar el registro de escuelas de la app (escuelas.json).</span> Revisa tu conexión y toca «Buscar escuelas» para intentarlo de nuevo.');
     resultados = [];
   } finally {
@@ -230,7 +252,7 @@ function tarjetaEscuela(e, esLaMasCercana) {
         '<div class="est-meta">a ' + e.dist.toFixed(1) + " km de " + esc(origen.etiqueta) +
           (e.direccion ? " · " + esc(e.direccion) : "") + "</div>" +
         '<div class="etiquetas">' +
-          '<span class="insignia">' + esc(e.nivel) + "</span>" +
+          '<span class="insignia">' + esc(e.nivelTexto || e.nivel) + "</span>" +
           '<span class="insignia ' + e.tipo + '">' + esc(e.tipoTexto) + "</span>" +
           (e.investigado ? '<span class="insignia investigado">Dato investigado</span>' : "") +
         "</div>" +
@@ -270,6 +292,7 @@ function render() {
   $("#conteo").textContent = arr.length
     ? "· " + arr.length + " resultado(s), por " + (orden === "fama" ? "mejor fama" : "cercanía")
     : "";
+  pintarResumen(arr.length); // el resumen principal refleja SIEMPRE el conteo filtrado visible
   if (!resultados.length) { $("#lista").innerHTML = ""; return; }
   $("#lista").innerHTML = arr.length
     ? arr.map((e, i) => tarjetaEscuela(e, i === 0 && orden === "cerca" && !q && nivelFiltro === "Todas" && tipoFiltro === "todas")).join("")
@@ -289,13 +312,14 @@ $("#btnActualizarVivo").addEventListener("click", async () => {
   estado("Consultando OpenStreetMap en vivo… (puede tardar unos segundos)");
   try {
     await actualizarEnVivo(radioKm);
-    estado("Datos <strong>actualizados en vivo</strong> desde OpenStreetMap: <strong>" + resultados.length + " escuelas</strong> en " + radioKm + " km alrededor de " + esc(origen.etiqueta) + ". Si cambias de centro o de radio, se vuelve al registro semanal.");
+    ultimoResumen = { radioKm, total: resultados.length, fuente: "vivo" };
+    render(); // pinta la lista y, con ella, el resumen principal (fuente «vivo»)
   } catch (e) {
+    // Sin render(): la lista no cambió y el resumen no debe pisar este aviso.
     estado('<span class="error">La actualización en vivo no respondió.</span> Se quedan los datos del registro semanal, sin cambios.');
   } finally {
     btn.disabled = false;
   }
-  render();
 });
 
 /* ---------- Guardar / restablecer preferencias (localStorage) ----------

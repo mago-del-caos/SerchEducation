@@ -52,7 +52,7 @@
 
 <footer>
   <p><img src="assets/icono-busqueda.png" alt=""> <strong>Fuente de datos:</strong> © OpenStreetMap y colaboradores (licencia ODbL); registro propio incluido en la app y actualizado cada semana.</p>
-  <p>Mapa © OpenStreetMap · © CARTO. Si el mapa no carga, abre la ruta a cada escuela con el botón «Cómo llegar» de su ficha.</p>
+  <p>Mapa © OpenStreetMap y colaboradores. Si el mapa no carga, abre la ruta a cada escuela con el botón «Cómo llegar» de su ficha.</p>
 </footer>
 <script src="app.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -115,7 +115,7 @@ function mostrarRespaldo(motivo) {
       '<p style="font-size:.92rem; line-height:1.55;">' + esc(motivo) + ' Puedes abrir la ruta a cada escuela desde su ficha:</p>' +
       '<div class="pasos" style="margin-top:10px;">' +
         resultados.map(e => '<div class="paso"><img src="' + iconoDeNivel(e.nivel) + '" alt=""><div><strong>' + esc(e.nombre) + '</strong>' +
-          '<span>' + esc(e.nivel) + ' · ' + esc(e.tipoTexto) + ' · ' +
+          '<span>' + esc(e.nivelTexto || e.nivel) + ' · ' + esc(e.tipoTexto) + ' · ' +
           '<a href="' + enlaceGoogleMapsEsc(e) + '" target="_blank" rel="noopener">Cómo llegar</a> · ' +
           '<a href="escuela.html?id=' + encodeURIComponent(e.id) + '">Detalle</a></span></div></div>').join("") +
       "</div>" +
@@ -155,7 +155,7 @@ function dibujarCirculo(encuadrar) {
 
 function popupEscuela(e) {
   return '<div class="pop-nombre">' + esc(e.nombre) + "</div>" +
-    esc(e.nivel) + " · " + esc(e.tipoTexto) + "<br>" +
+    esc(e.nivelTexto || e.nivel) + " · " + esc(e.tipoTexto) + "<br>" +
     (e.investigado ? "Con <strong>dato investigado</strong> en su ficha<br>" : "") +
     "a " + e.dist.toFixed(1) + " km" +
     ' · <a href="escuela.html?id=' + encodeURIComponent(e.id) + '">Detalle</a>' +
@@ -199,10 +199,12 @@ montarSelectorCentro("#selectorCentro", async () => {
     return;
   }
   mapa = L.map("mapa").setView([origen.lat, origen.lng], 13);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-    subdomains: "abcd",
-    maxZoom: 20,
-    attribution: "© OpenStreetMap · © CARTO"
+  /* Teselas: OpenStreetMap estándar. (CARTO Voyager quedó fuera:
+     su capa pública ahora exige API key y devuelve una imagen de
+     «API KEY REQUIRED» en cada tesela.) */
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "© OpenStreetMap y colaboradores"
   }).addTo(mapa);
   if (!resultados.length) {
     $("#mapaMsg").textContent = "Filtrando el registro en " + radioActual + " km…";

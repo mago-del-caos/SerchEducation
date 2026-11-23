@@ -59,8 +59,28 @@ if (!e) {
 } else {
   const inv = e.investigado || null;
   const filas = [];
-  filas.push(["Nivel educativo", esc(e.nivel) + ' <span style="color:var(--texto2);">(inferido de las etiquetas de OpenStreetMap)</span>']);
-  filas.push(["Tipo", esc(e.tipoTexto) + ' <span style="color:var(--texto2);">(registro público de OpenStreetMap)</span>']);
+  /* La nota de cada dato dice su FUENTE real: SEP (directorio
+     oficial), OSM (declarado), inferido (estimación por el nombre)
+     o investigado (datos-extra.json). Nada se disfraza. */
+  const notaNivel = e.nivelFuente === "sep"
+    ? ' <span style="color:var(--texto2);">(directorio oficial de la SEP' + (e.cct ? ", CCT " + esc(e.cct) : "") + ')</span>'
+    : e.nivelFuente === "osm"
+    ? ' <span style="color:var(--texto2);">(declarado en OpenStreetMap)</span>'
+    : e.nivelFuente === "inferido"
+    ? ' <span style="color:var(--texto2);">(inferido del nombre: estimación, no dato oficial)</span>'
+    : ' <span style="color:var(--texto2);">(sin fuente registrada)</span>';
+  filas.push(["Nivel educativo", esc(e.nivel) + notaNivel]);
+  if (e.cct) filas.push(["Clave de Centro de Trabajo (CCT)", esc(e.cct) + ' <span style="color:var(--texto2);">(directorio oficial de la SEP)</span>']);
+  const notaTipo = e.tipoFuente === "investigado"
+    ? ' <span style="color:var(--dorado);">(dato investigado)</span>'
+    : e.tipoFuente === "sep"
+    ? ' <span style="color:var(--texto2);">(sostenimiento según el directorio oficial de la SEP)</span>'
+    : e.tipoFuente === "osm"
+    ? ' <span style="color:var(--texto2);">(declarado en OpenStreetMap)</span>'
+    : e.tipoFuente === "inferido"
+    ? ' <span style="color:var(--texto2);">(inferido del nombre: estimación, no dato oficial)</span>'
+    : ' <span style="color:var(--texto2);">(sin dato público)</span>';
+  filas.push(["Tipo", esc(e.tipoTexto) + notaTipo]);
   if (inv && inv.costos) {
     filas.push(["Costo", esc(inv.costos) + ' <span style="color:var(--dorado);">(dato investigado)</span>']);
   } else {
@@ -119,7 +139,7 @@ if (!e) {
     '<div class="est-top">' +
       '<img class="est-icono" src="' + iconoDeNivel(e.nivel) + '" alt="">' +
       "<div><h2>" + esc(e.nombre) + "</h2>" +
-      '<div class="etiquetas"><span class="insignia">' + esc(e.nivel) + '</span>' +
+      '<div class="etiquetas"><span class="insignia">' + esc(e.nivelTexto || e.nivel) + '</span>' +
       '<span class="insignia ' + e.tipo + '">' + esc(e.tipoTexto) + "</span>" +
       (inv ? '<span class="insignia investigado">Dato investigado</span>' : "") + "</div></div>" +
     "</div>" +
