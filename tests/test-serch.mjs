@@ -1,6 +1,9 @@
-/* Pruebas de Serch Education con jsdom y un fixture local de Overpass
-   (sin red real): se sirve el proyecto por HTTP local, se sustituye
-   fetch (Overpass y datos-extra.json) y Leaflet por dobles de prueba.
+/* Pruebas de Serch Education con jsdom y fixtures locales (sin red
+   real): la fuente primaria es el dataset (fixture-escuelas.json,
+   espejo chico de escuelas.json); Overpass solo se ejercita en el
+   botón «Actualizar en vivo» con fixture-overpass.json. Se sirve el
+   proyecto por HTTP local y se sustituyen fetch y Leaflet por
+   dobles de prueba.
    Uso:  cd tests && node test-serch.mjs                        */
 import pkg from "jsdom";
 const { JSDOM, requestInterceptor } = pkg;
@@ -11,6 +14,7 @@ import { fileURLToPath } from "node:url";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixtureOverpass = JSON.parse(await readFile(path.join(RAIZ, "tests", "fixture-overpass.json"), "utf8"));
+const fixtureDataset = JSON.parse(await readFile(path.join(RAIZ, "tests", "fixture-escuelas.json"), "utf8"));
 const eventosReales = JSON.parse(await readFile(path.join(RAIZ, "eventos.json"), "utf8"));
 
 /* datos-extra.json de prueba: fama y eventos para dos escuelas. */
@@ -78,14 +82,42 @@ async function esperar(fn, nombre, ms = 8000) {
   ok(false, nombre + " (tiempo agotado)");
   return false;
 }
-function stubFetch(win) {
+/* Doble de fetch: registra cada URL pedida en win.__urls.
+   Opciones: {dataset} sustituye el cuerpo de escuelas.json;
+   {datasetFalla:true} hace que escuelas.json lance (red caída). */
+function stubFetch(win, opciones = {}) {
+  win.__urls = [];
   win.fetch = async (url) => {
     const u = String(url);
-    const cuerpo = u.includes("overpass") ? fixtureOverpass
-      : u.includes("datos-extra.json") ? EXTRA
+    win.__urls.push(u);
+    if (u.includes("overpass")) return { ok: true, status: 200, json: async () => fixtureOverpass };
+    if (u.includes("escuelas.json")) {
+      if (opciones.datasetFalla) throw new TypeError("fallo de red simulado (dataset)");
+      return { ok: true, status: 200, json: async () => opciones.dataset || fixtureDataset };
+    }
+    const cuerpo = u.includes("datos-extra.json") ? EXTRA
       : u.includes("eventos.json") ? eventosReales
       : {};
     return { ok: true, status: 200, json: async () => cuerpo };
+  };
+}
+/* Doble de Leaflet que registra teselas, iconos, marcadores y
+   radios de círculo pedidos, para poder afirmar sobre ellos. */
+function stubLeaflet(reg) {
+  return {
+    map: () => ({ setView() { return this; }, fitBounds() {} }),
+    tileLayer: (url) => { reg.teselas.push(url); return { addTo() {} }; },
+    circle: (latlng, opts) => { reg.radios.push(opts.radius); return { addTo() { return this; }, remove() {}, getBounds() { return {}; } }; },
+    marker: (latlng, opts) => {
+      const m = { latlng, opts, popup: null,
+        addTo() { return this; },
+        bindPopup(html) { this.popup = html; reg.marcadores.push(this); return this; },
+        remove() {} };
+      return m;
+    },
+    divIcon: (o) => o,
+    icon: (o) => { reg.iconos.push(o); return o; },
+    layerGroup: () => ({ addLayer() {}, addTo() { return this; }, remove() {} })
   };
 }
 
@@ -120,6 +152,16 @@ ok(w.document.querySelectorAll("#selectorCentro .centro-btn").length === 2, "el 
 ok(w.document.querySelector('#selectorCentro .centro-btn[data-centro="ijem"]').classList.contains("activo"), "en el interruptor arranca activo «Instituto Juventud»");
 ok(!w.document.getElementById("btnGps") && !w.document.body.textContent.includes("Usar mi ubicación"), "ya no existe el botón «Usar mi ubicación» en el Inicio");
 ok(ev("typeof pedirUbicacion") === "undefined" && ev("typeof hayGPS") === "undefined", "la geolocalización como origen quedó eliminada de app.js");
+ok(w.__urls.some(u => u.includes("escuelas.json")), "al cargar se pidió el registro propio (escuelas.json)");
+ok(!w.__urls.some(u => u.includes("overpass")), "al cargar NO se llamó a Overpass: la lista sale del dataset, no de la consulta en vivo");
+const estadoIni = w.document.querySelector("#estadoBusqueda").textContent;
+ok(estadoIni.includes("Datos del 2026-11-21") && estadoIni.includes("7 escuelas en el registro") && estadoIni.includes("se actualiza cada semana"),
+   "la línea de estado dice la fecha del dataset, su total y que se actualiza cada semana");
+ok(ev("infoDataset().total") === 7 && ev("infoDataset().generado") === "2026-11-21" && ev("fuenteActual()") === "dataset",
+   "infoDataset expone fecha y total del registro, y la fuente activa es el dataset");
+const lineaCentro = w.document.querySelector("#centroActivoTxt").textContent;
+ok(lineaCentro.includes("Instituto Juventud del Estado de México") && lineaCentro.includes("Rincón Echegaray"),
+   "bajo el interruptor, la línea de centro activo nombra el centro y su dirección de referencia");
 
 /* ============ 2. Inicio: tarjetas, fama y orden «Mejor fama» ============ */
 console.log("— Inicio: tarjetas y orden por fama —");
@@ -169,27 +211,48 @@ const llenas = domFicha.window.document.querySelectorAll(".estrellas-ver .est.ll
 const medias = domFicha.window.document.querySelectorAll(".estrellas-ver .est.media").length;
 ok(llenas === 4 && medias === 1, "el pintado de estrellas de 4.6 da 4 llenas y 1 media");
 
-/* ============ 5. Mapa: el círculo usa el radio elegido ============ */
+/* ============ 5. Mapa: círculo, capa CARTO y marcador del centro ============ */
 console.log("— Mapa —");
-const radiosCirculo = [];
+const regMapa = { teselas: [], iconos: [], marcadores: [], radios: [] };
 const domMapa = await cargarPagina("mapa.html", "", {
   beforeParse(win) {
     stubFetch(win);
-    win.L = {
-      map: () => ({ setView() { return this; }, fitBounds() {} }),
-      tileLayer: () => ({ addTo() {} }),
-      circle: (latlng, opts) => { radiosCirculo.push(opts.radius); return { addTo() { return this; }, remove() {}, getBounds() { return {}; } }; },
-      marker: () => ({ addTo() { return this; }, bindPopup() { return this; }, remove() {} }),
-      divIcon: (o) => o, icon: (o) => o,
-      layerGroup: () => ({ addLayer() {}, addTo() { return this; }, remove() {} })
-    };
+    win.L = stubLeaflet(regMapa);
   }
 });
-await esperar(() => radiosCirculo.includes(5000), "el mapa dibuja el círculo del radio de la búsqueda (5 km)");
+await esperar(() => regMapa.radios.includes(5000), "el mapa dibuja el círculo del radio de la búsqueda (5 km)");
 ok(!domMapa.window.document.getElementById("btnMiUbicacion"), "ya no existe el botón «Mi ubicación» en el Mapa");
 ok(domMapa.window.document.querySelectorAll("#selectorCentro .centro-btn").length === 2, "el Mapa trae el interruptor con los dos centros");
+ok(regMapa.teselas.length === 1 && regMapa.teselas[0].includes("basemaps.cartocdn.com") && regMapa.teselas[0].includes("rastertiles/voyager"),
+   "el mapa usa la capa de teselas CARTO Voyager, no el servidor de OSM");
+const iconoCentro = regMapa.iconos.find(o => o.iconUrl === "assets/marcador-centro.png");
+ok(!!iconoCentro && iconoCentro.iconSize[0] === 44 && iconoCentro.iconSize[1] === 44,
+   "el centro se marca con el logo «Soy Juventud» (assets/marcador-centro.png) a 44 px");
+const marcadorCentro = regMapa.marcadores.find(m => m.opts && m.opts.zIndexOffset === 10000);
+ok(!!marcadorCentro && marcadorCentro.latlng[0] === 19.4785 && marcadorCentro.latlng[1] === -99.2396,
+   "el marcador del centro está en las coordenadas del IJEM y por encima de todo (zIndexOffset máximo)");
+ok(!!marcadorCentro && marcadorCentro.popup.includes("Instituto Juventud del Estado de México") && marcadorCentro.popup.includes("centro de búsqueda"),
+   "el popup del marcador nombra el centro activo: «Instituto Juventud del Estado de México — centro de búsqueda»");
 domMapa.window.document.querySelector('.chip-radio[data-radio="10"]').click();
-await esperar(() => radiosCirculo.includes(10000), "al cambiar el radio a 10 km, el círculo se redibuja con 10000 m");
+await esperar(() => regMapa.radios.includes(10000), "al cambiar el radio a 10 km, el círculo se redibuja con 10000 m");
+
+/* ============ 5b. Mapa con cero resultados: el centro se ve igual ============ */
+console.log("— Mapa sin resultados —");
+const datasetLejano = { generado: "2026-11-21", total: 1, escuelas: fixtureDataset.escuelas.filter(e => e.id === "node/107") };
+const regCero = { teselas: [], iconos: [], marcadores: [], radios: [] };
+const domMapaCero = await cargarPagina("mapa.html", "", {
+  beforeParse(win) {
+    stubFetch(win, { dataset: datasetLejano });
+    win.L = stubLeaflet(regCero);
+  }
+});
+await esperar(() => regCero.marcadores.some(m => m.opts && m.opts.zIndexOffset === 10000),
+   "con cero escuelas en el radio, el marcador del centro se dibuja igual");
+const marcadorCero = regCero.marcadores.find(m => m.opts && m.opts.zIndexOffset === 10000);
+ok(!!marcadorCero && marcadorCero.popup.includes("Instituto Juventud del Estado de México") && marcadorCero.popup.includes("centro de búsqueda"),
+   "sin resultados, el popup sigue nombrando el centro activo");
+ok(domMapaCero.window.document.querySelector("#mapaMsg").textContent.includes("Se encontraron 0 escuelas"),
+   "el mapa reporta cero escuelas sin romperse");
 
 /* ============ 6. Eventos: pinta eventos.json y los investigados ============ */
 console.log("— Página de eventos —");
@@ -204,34 +267,55 @@ ok(domEventos.window.document.querySelector("#listaInvestigados").textContent.in
 ok(domEventos.window.document.querySelector("#listaInvestigados").textContent.includes("Benito Juárez"), "los eventos investigados van agrupados por escuela, con su nombre");
 ok(domEventos.window.document.querySelector("#listaInvestigados").textContent.includes("Consultado el 2026-11-20"), "el grupo muestra la fecha de consulta");
 
-/* ============ 7. Respaldo Overpass: el 1º falla, el 2º responde ============ */
-console.log("— Respaldo de intérpretes Overpass —");
-const llamadasOverpass = [];
-const domRespaldo = await cargarPagina("index.html", "", {
+/* ============ 7. «Actualizar en vivo»: opcional y sustituye la sesión ============ */
+console.log("— Actualizar en vivo (Overpass con respaldos) —");
+/* La respuesta en vivo difiere del dataset a propósito: pierde al
+   Instituto Cultural Amanecer (node/106) y gana una escuela nueva
+   (node/108), para poder afirmar que la sesión quedó sustituida. */
+const fixtureVivo = { elements: fixtureOverpass.elements.filter(el => el.id !== 106).concat([{
+  type: "node", id: 108, lat: 19.4795, lon: -99.2385,
+  tags: { amenity: "school", name: "Escuela en Vivo de Prueba", "operator:type": "public" }
+}]) };
+const llamadasVivo = [];
+const domVivo = await cargarPagina("index.html", "", {
   beforeParse(win) {
+    win.__urls = [];
     win.fetch = async (url) => {
       const u = String(url);
+      win.__urls.push(u);
       if (u.includes("overpass")) {
-        llamadasOverpass.push(u);
+        llamadasVivo.push(u);
         if (u.includes("overpass-api.de")) throw new TypeError("fallo de red simulado");
-        return { ok: true, status: 200, json: async () => fixtureOverpass };
+        return { ok: true, status: 200, json: async () => fixtureVivo };
       }
-      const cuerpo = u.includes("datos-extra.json") ? EXTRA
+      const cuerpo = u.includes("escuelas.json") ? fixtureDataset
+        : u.includes("datos-extra.json") ? EXTRA
         : u.includes("eventos.json") ? eventosReales : {};
       return { ok: true, status: 200, json: async () => cuerpo };
     };
   }
 });
-await esperar(() => domRespaldo.window.document.querySelectorAll("#lista .tarjeta-est").length >= 6, "con el primer intérprete caído, la búsqueda termina con resultados del respaldo");
-ok(llamadasOverpass.length >= 2 &&
-   llamadasOverpass[0].includes("overpass-api.de") &&
-   llamadasOverpass[1].includes("overpass.kumi.systems"),
+const wv = domVivo.window;
+const tarjetasVivo = () => [...wv.document.querySelectorAll("#lista .tarjeta-est")];
+await esperar(() => tarjetasVivo().length >= 6, "la carga inicial pinta las escuelas del dataset");
+ok(llamadasVivo.length === 0, "la carga inicial NO tocó Overpass (la fuente primaria es el dataset)");
+ok(tarjetasVivo().some(t => t.textContent.includes("Instituto Cultural Amanecer")), "antes de actualizar se ve la escuela que solo está en el dataset (Amanecer)");
+wv.document.querySelector("#btnActualizarVivo").click();
+await esperar(() => tarjetasVivo().some(t => t.textContent.includes("Escuela en Vivo de Prueba")),
+   "tras «Actualizar en vivo», la lista se sustituye con los datos en vivo");
+ok(llamadasVivo.length >= 2 &&
+   llamadasVivo[0].includes("overpass-api.de") &&
+   llamadasVivo[1].includes("overpass.kumi.systems"),
    "se intentó primero overpass-api.de y luego el respaldo kumi.systems, sin intervención del usuario");
-const estadoRespaldo = domRespaldo.window.document.querySelector("#estadoBusqueda").textContent;
-ok(estadoRespaldo.includes("Se encontraron") && !estadoRespaldo.includes("falló"),
-   "sin error visible: el estado reporta las escuelas encontradas vía el respaldo");
-ok(domRespaldo.window.sessionStorage.getItem("serch_overpass_endpoint") === "https://overpass.kumi.systems/api/interpreter",
+ok(!tarjetasVivo().some(t => t.textContent.includes("Instituto Cultural Amanecer")),
+   "la escuela que solo estaba en el dataset ya no aparece: la sesión quedó sustituida por lo vivo");
+ok(wv.document.querySelector("#estadoBusqueda").textContent.includes("actualizados en vivo"),
+   "el estado anuncia los datos actualizados en vivo");
+ok(wv.sessionStorage.getItem("serch_overpass_endpoint") === "https://overpass.kumi.systems/api/interpreter",
    "se recuerda en sessionStorage el intérprete que funcionó (kumi.systems)");
+ok(JSON.parse(wv.sessionStorage.getItem("serch_resultados")).fuente === "vivo",
+   "los resultados guardados en la sesión quedan marcados con fuente «vivo»");
+ok(wv.eval("fuenteActual()") === "vivo", "la fuente activa de la sesión es «vivo» tras actualizar");
 
 /* ============ 8. Interruptor de centro: cambian origen y distancias ============ */
 console.log("— Interruptor de centro fijo —");
@@ -347,6 +431,24 @@ ok(wp2.document.querySelector('.nivel-btn[data-nivel="Todas"]').classList.contai
    "tras restablecer, nivel, tipo y orden vuelven a los valores por defecto");
 ok(wp2.document.querySelectorAll("#lista .tarjeta-est").length === 6,
    "tras restablecer se ven las 6 escuelas del radio por defecto");
+
+/* ============ 10. Dataset caído: los controles se montan igual ============ */
+console.log("— Sin dataset: error controlado y controles vivos —");
+const domSinDatos = await cargarPagina("index.html", "", {
+  beforeParse(win) { stubFetch(win, { datasetFalla: true }); }
+});
+const wsd = domSinDatos.window;
+await esperar(() => wsd.document.querySelector("#estadoBusqueda").textContent.includes("No se pudo cargar el registro"),
+   "sin dataset, el error es controlado y se anuncia en la línea de estado");
+ok(wsd.document.querySelectorAll("#selectorCentro .centro-btn").length === 2,
+   "aunque el dataset falle al cargar, el interruptor renderiza sus dos botones");
+ok(wsd.document.querySelector('#selectorCentro .centro-btn[data-centro="kinder"]').textContent.includes("Jardín de Niños"),
+   "el botón «Jardín de Niños» está presente sin datos");
+ok(wsd.document.querySelectorAll(".chip-radio").length === 6, "los chips de radio también se montan sin datos");
+ok(wsd.document.querySelector("#centroActivoTxt").textContent.includes("Instituto Juventud del Estado de México"),
+   "la línea de centro activo se pinta aunque no haya datos");
+ok(wsd.document.querySelectorAll("#lista .tarjeta-est").length === 0,
+   "sin dataset no se pinta ninguna tarjeta: nada inventado");
 
 console.log("\nResultado: " + pasadas + " pasadas, " + falladas + " falladas");
 servidor.close();
