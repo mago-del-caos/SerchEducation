@@ -16,11 +16,13 @@ Buscador de escuelas — kinder, primaria, secundaria y preparatoria — cerca d
 | `eventos.html` | Dos bloques: los **eventos investigados** de `datos-extra.json`, agrupados por escuela con su fecha de consulta, y los **hallazgos de la vigilancia semanal** de `eventos.json`. |
 | `acerca.html` | Cómo funciona, fuentes y límites honestos de los datos. |
 
-Todas las páginas comparten menú desplegable, botón «Descargar la app» (PWA: `manifest.json` + `sw.js`, caché `serch-v1`) y el **asistente en burbuja**: un chatbot local, sin API, que responde solo con los resultados cargados («¿qué primarias hay cerca?», «¿cuáles son gratuitas?», «¿cuál es la más cercana?», «¿cuántas hay en 5 km?», «¿qué servicios tiene…?», «¿qué fama tiene…?», «¿cuál es la mejor valorada?», «¿qué eventos hay?»).
+Todas las páginas comparten menú desplegable, botón «Descargar la app» (PWA: `manifest.json` + `sw.js`, caché `serch-v2`) y el **asistente en burbuja**: un chatbot local, sin API, que responde solo con los resultados cargados («¿qué primarias hay cerca?», «¿cuáles son gratuitas?», «¿cuál es la más cercana?», «¿cuántas hay en 5 km?», «¿qué servicios tiene…?», «¿qué fama tiene…?», «¿cuál es la mejor valorada?», «¿qué eventos hay?»).
 
 ## Fuente de datos principal: OpenStreetMap (en vivo)
 
-El navegador consulta la **Overpass API** (`https://overpass-api.de/api/interpreter`) con `amenity=school` y `amenity=kindergarten` (nodos y vías, `out center tags`) alrededor del origen y el radio elegidos.
+El navegador consulta la **Overpass API** con `amenity=school` y `amenity=kindergarten` (nodos y vías, `out center tags`) alrededor del origen y el radio elegidos.
+
+**Respaldos automáticos:** la consulta no depende de un solo servidor. Hay una lista ordenada de intérpretes Overpass — `overpass-api.de`, `overpass.kumi.systems` y `overpass.private.coffee` — y la búsqueda los intenta en orden: si uno falla (red, respuesta no-OK o timeout del cliente a los ~40 s), pasa al siguiente sin que el usuario haga nada; el error solo aparece si fallan **todos**. El intérprete que funcionó se recuerda en la sesión (`sessionStorage`) y se intenta primero la próxima vez. La revisión semanal (`tools/snapshot.py`) usa la misma lista y el mismo orden de respaldo.
 
 - **Nivel educativo** — *heurística*, no dato oficial: `amenity=kindergarten` → Kinder; etiquetas `isced:level` / `school:level`; y el nombre en español («jardín de niños», «primaria», «secundaria», «preparatoria», «CBTis», «Conalep»…). Si no se puede saber: **«Nivel sin especificar»**.
 - **Pago / gratuita** — `operator:type=public` → «Pública (gratuita)»; `=private` → «Particular (de pago)»; etiqueta `fee` si existe; si no hay dato: **«Tipo sin dato público»**.

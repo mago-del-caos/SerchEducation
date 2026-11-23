@@ -60,7 +60,30 @@ function enlaceGoogleMapsEsc(e) {
 /* ============================================================
    OpenStreetMap / Overpass: consulta y clasificación
    ============================================================ */
-const URL_OVERPASS = "https://overpass-api.de/api/interpreter";
+/* Intérpretes Overpass, en orden de intento: si uno falla (red,
+   respuesta no-OK o timeout del cliente), la búsqueda pasa al
+   siguiente SIN intervención del usuario; solo si TODOS fallan se
+   muestra el error. El endpoint que funcionó se recuerda en
+   sessionStorage para intentarlo primero la próxima vez dentro de
+   la misma sesión. */
+const URLS_OVERPASS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter"
+];
+const CLAVE_ENDPOINT_OVERPASS = "serch_overpass_endpoint";
+function endpointsOverpass() {
+  try {
+    const bueno = sessionStorage.getItem(CLAVE_ENDPOINT_OVERPASS);
+    if (bueno && URLS_OVERPASS.includes(bueno)) {
+      return [bueno, ...URLS_OVERPASS.filter(u => u !== bueno)];
+    }
+  } catch (e) { /* sin sessionStorage */ }
+  return [...URLS_OVERPASS];
+}
+function recordarEndpointOverpass(url) {
+  try { sessionStorage.setItem(CLAVE_ENDPOINT_OVERPASS, url); } catch (e) { /* sin sessionStorage */ }
+}
 const RADIOS_KM = [1, 3, 5, 10, 20, 50];
 
 /* Consulta Overpass: escuelas y jardines de niños (nodos y vías,
@@ -248,7 +271,7 @@ function iconoDeNivel(nivel) {
   }[nivel] || "assets/icono-busqueda.png";
 }
 
-/* ---------- Búsqueda en vivo (con un reintento) ---------- */
+/* ---------- Búsqueda en vivo (con respaldos automáticos) ---------- */
 let resultados = [];
 function guardarResultados(radioKm) {
   try {
@@ -265,11 +288,13 @@ function cargarResultadosGuardados() {
   } catch (e) { /* nada guardado */ }
   return null;
 }
-async function consultarOverpass(consulta, intento) {
+/* Un solo intento contra un intérprete, con timeout del cliente
+   (~40 s) vía AbortController. Lanza si falla lo que sea. */
+async function consultarEnEndpoint(url, consulta) {
   const ctrl = new AbortController();
-  const temporizador = setTimeout(() => ctrl.abort(), 45000);
+  const temporizador = setTimeout(() => ctrl.abort(), 40000);
   try {
-    const r = await fetch(URL_OVERPASS, {
+    const r = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
       body: "data=" + encodeURIComponent(consulta),
@@ -277,18 +302,28 @@ async function consultarOverpass(consulta, intento) {
     });
     if (!r.ok) throw new Error("Overpass respondió " + r.status);
     return await r.json();
-  } catch (e) {
-    if (intento < 1) {
-      await new Promise(res => setTimeout(res, 2000));
-      return consultarOverpass(consulta, intento + 1);
-    }
-    throw e;
   } finally {
     clearTimeout(temporizador);
   }
 }
+/* Recorre los intérpretes en orden (el que ya funcionó en la sesión
+   va primero) y devuelve la primera respuesta buena, recordándola.
+   Solo lanza cuando TODOS los respaldos fallaron. */
+async function consultarOverpass(consulta) {
+  let ultimoError = null;
+  for (const url of endpointsOverpass()) {
+    try {
+      const data = await consultarEnEndpoint(url, consulta);
+      recordarEndpointOverpass(url);
+      return data;
+    } catch (e) {
+      ultimoError = e; // este intérprete falló: se pasa al siguiente
+    }
+  }
+  throw ultimoError || new Error("Ningún intérprete Overpass respondió");
+}
 async function buscarEscuelas(radioKm) {
-  const data = await consultarOverpass(construirConsultaOverpass(origen.lat, origen.lng, radioKm), 0);
+  const data = await consultarOverpass(construirConsultaOverpass(origen.lat, origen.lng, radioKm));
   const vistas = new Set();
   const lista = [];
   for (const el of (data.elements || [])) {
@@ -681,6 +716,6 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     construirConsultaOverpass, clasificarNivel, clasificarTipo, normalizarEscuela,
     filtrarPorRadio, distanciaKm, normalizar, RADIOS_KM, aplicarDatosExtra, CENTRO_DEFECTO,
-    pintarEstrellas
+    pintarEstrellas, URLS_OVERPASS, endpointsOverpass
   };
 }
