@@ -31,7 +31,14 @@ from pathlib import Path
 
 CENTRO = (19.4785, -99.2396)   # Instituto Juventud del Estado de México
 RADIO_KM = 10
-URL_OVERPASS = "https://overpass-api.de/api/interpreter"
+# Intérpretes Overpass en orden de intento (los mismos respaldos que
+# usa la app en app.js): si uno falla —red, HTTP no-OK o timeout— se
+# pasa al siguiente; solo si TODOS fallan se propaga el error.
+URLS_OVERPASS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+]
 FOTO_DEFECTO = Path(__file__).with_name("snapshot.json")
 
 
@@ -115,17 +122,23 @@ def obtener_datos(desde_archivo=None):
         with open(desde_archivo, encoding="utf-8") as f:
             return json.load(f)
     consulta = consulta_overpass(CENTRO[0], CENTRO[1], RADIO_KM)
-    req = urllib.request.Request(
-        URL_OVERPASS,
-        data=urllib.parse.urlencode({"data": consulta}).encode("utf-8"),
-        headers={
-            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "User-Agent": "SerchEducation/1.0 (revision semanal; datos OSM)",
-        },
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return json.loads(r.read().decode("utf-8"))
+    ultimo_error = None
+    for url in URLS_OVERPASS:
+        req = urllib.request.Request(
+            url,
+            data=urllib.parse.urlencode({"data": consulta}).encode("utf-8"),
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                "User-Agent": "SerchEducation/1.0 (revision semanal; datos OSM)",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return json.loads(r.read().decode("utf-8"))
+        except Exception as e:  # este intérprete falló: se pasa al siguiente
+            ultimo_error = e
+    raise ultimo_error
 
 
 def main():
