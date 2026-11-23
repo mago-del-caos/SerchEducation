@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eventos y cambios — Serch Education</title>
+<meta name="description" content="Eventos, promociones y cambios de las escuelas: datos investigados y hallazgos de la vigilancia semanal de Serch Education.">
+<link rel="icon" type="image/png" href="assets/icono-busqueda.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d2137">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<header>
+  <a class="marca" href="index.html" aria-label="Serch Education — ir al inicio">
+    <img class="logo" src="assets/icono-busqueda.png" alt="Logo de Serch Education">
+    <div>
+      <h1><span class="serch">Serch</span> <span class="edu">Education</span></h1>
+      <p class="saludo">Hola · <span class="fecha-hoy"></span></p>
+      <p>Eventos, promociones y cambios: lo investigado por escuela y lo que detecta la vigilancia semanal.</p>
+    </div>
+  </a>
+  <button class="btn-menu" id="btnMenu" aria-label="Abrir el menú de navegación" aria-haspopup="true" aria-expanded="false" aria-controls="menuNav">☰</button>
+  <nav class="menu" id="menuNav" aria-label="Navegación principal">
+    <a href="index.html"><img src="assets/icono-busqueda.png" alt=""> Inicio</a>
+    <a href="mapa.html"><img src="assets/icono-distancia.png" alt=""> Mapa</a>
+    <a href="eventos.html"><img src="assets/icono-eventos.png" alt=""> Eventos y cambios</a>
+    <a href="acerca.html"><img src="assets/icono-egresado.png" alt=""> Cómo funciona</a>
+    <button type="button" class="btn-instalar">📲 Descargar la app</button>
+  </nav>
+</header>
+<main>
+  <div class="titulo-seccion"><img src="assets/icono-eventos.png" alt=""> Eventos y promociones investigados</div>
+  <p class="estado-busqueda" id="estadoInvestigados" role="status">Cargando los datos investigados…</p>
+  <section id="listaInvestigados"></section>
+
+  <div class="titulo-seccion"><img src="assets/icono-radar.png" alt=""> Hallazgos de la vigilancia semanal</div>
+  <p class="estado-busqueda" id="estadoEventos" role="status">Cargando los hallazgos…</p>
+  <section id="listaEventos"></section>
+</main>
+
+<footer>
+  <p><img src="assets/icono-busqueda.png" alt=""> <strong>Fuente de datos:</strong> © OpenStreetMap y colaboradores (licencia ODbL), consultado en vivo con Overpass API. Los eventos investigados salen del archivo <em>datos-extra.json</em> de este proyecto, con su fuente y fecha de consulta; los hallazgos, de la revisión semanal automática.</p>
+  <p>Serch Education no inventa costos, beneficios ni servicios: si una escuela no los publica, consúltalos directamente con ella.</p>
+</footer>
+<script src="app.js"></script>
+<script>
+"use strict";
+/* ---------- Eventos investigados (datos-extra.json), por escuela ---------- */
+(async function pintarInvestigados() {
+  const estadoEl = $("#estadoInvestigados");
+  const lista = $("#listaInvestigados");
+  let extra = {};
+  try {
+    const r = await fetch("datos-extra.json", { cache: "no-cache" });
+    if (r.ok) extra = await r.json();
+  } catch (e) { /* se trata como vacío */ }
+  // Nombres de escuela: de la búsqueda guardada en la sesión, por id de OSM.
+  const guardado = cargarResultadosGuardados();
+  const nombres = {};
+  if (guardado) for (const e of guardado.escuelas) nombres[e.id] = e.nombre;
+
+  const conEventos = Object.entries(extra || {})
+    .filter(([, d]) => d && Array.isArray(d.eventos) && d.eventos.length);
+  if (!conEventos.length) {
+    estadoEl.textContent = "Aún no hay eventos ni promociones investigados registrados. Conforme se investiguen las escuelas de la zona, aparecerán aquí agrupados por escuela.";
+    return;
+  }
+  estadoEl.textContent = conEventos.length + " escuela(s) con eventos o promociones investigados:";
+  lista.innerHTML = conEventos.map(([id, d]) => {
+    const nombre = nombres[id] || ("Escuela " + id + " en OpenStreetMap");
+    return '<article class="tarjeta-est">' +
+      '<div class="est-top"><div>' +
+        '<div class="est-nombre"><a href="escuela.html?id=' + encodeURIComponent(id) + '">' + esc(nombre) + "</a></div>" +
+        '<div class="est-meta">Identificador OSM: ' + esc(id) +
+          (d.fecha ? " · Consultado el " + esc(d.fecha) : "") +
+          (d.fuente ? ' · Fuente: ' + (String(d.fuente).startsWith("http")
+            ? '<a href="' + esc(d.fuente) + '" target="_blank" rel="noopener" style="color:var(--acento); font-weight:600;">' + esc(d.fuente) + "</a>"
+            : esc(d.fuente)) : "") + "</div>" +
+      "</div></div>" +
+      d.eventos.map(ev =>
+        '<p style="line-height:1.55; margin-top:10px;"><span class="evento-tipo promocion">Evento</span> ' +
+        "<strong>" + esc(ev.titulo || "") + "</strong>" +
+        (ev.fecha ? ' <span class="evento-fecha">(' + esc(ev.fecha) + ")</span>" : "") +
+        (ev.descripcion ? "<br><span style='color:var(--texto2);'>" + esc(ev.descripcion) + "</span>" : "") + "</p>"
+      ).join("") +
+    "</article>";
+  }).join("");
+})();
+
+/* ---------- Hallazgos de la vigilancia semanal (eventos.json) ---------- */
+(async function pintarEventos() {
+  const estadoEl = $("#estadoEventos");
+  const lista = $("#listaEventos");
+  try {
+    const r = await fetch("eventos.json", { cache: "no-cache" });
+    if (!r.ok) throw new Error("eventos.json respondió " + r.status);
+    const eventos = await r.json();
+    if (!Array.isArray(eventos) || !eventos.length) {
+      estadoEl.textContent = "Todavía no hay hallazgos registrados.";
+      return;
+    }
+    estadoEl.textContent = eventos.length + " registro(s) de la vigilancia:";
+    lista.innerHTML = eventos.map(ev => {
+      const tipo = normalizar(ev.tipo || "");
+      const clase = tipo.includes("promocion") ? " promocion" : "";
+      return '<article class="tarjeta-est">' +
+        '<div class="est-top"><div>' +
+          '<div class="est-nombre">' + esc(ev.escuela || "(general)") + "</div>" +
+          '<div class="est-meta">' + esc(ev.fecha || "") + (ev.fuente ? " · " + esc(ev.fuente) : "") + "</div>" +
+        "</div>" +
+        '<span class="evento-tipo' + clase + '" style="margin-left:auto;">' + esc(ev.tipo || "hallazgo") + "</span></div>" +
+        '<p style="line-height:1.6; margin-top:10px;">' + esc(ev.descripcion || "") + "</p>" +
+      "</article>";
+    }).join("");
+  } catch (e) {
+    estadoEl.innerHTML = '<span class="error">No se pudo cargar el registro de la vigilancia (eventos.json).</span>';
+  }
+})();
+</script>
+</body>
+</html>

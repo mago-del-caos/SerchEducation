@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Serch Education — Buscador de escuelas cerca de ti</title>
+<meta name="description" content="Serch Education: encuentra kinder, primarias, secundarias y preparatorias cerca de ti, gratuitas o de pago, con datos abiertos de OpenStreetMap.">
+<link rel="icon" type="image/png" href="assets/icono-busqueda.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d2137">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<header>
+  <a class="marca" href="index.html" aria-label="Serch Education — ir al inicio">
+    <img class="logo" src="assets/icono-busqueda.png" alt="Logo de Serch Education">
+    <div>
+      <h1><span class="serch">Serch</span> <span class="edu">Education</span></h1>
+      <p class="saludo">Hola · <span class="fecha-hoy"></span></p>
+      <p>Encuentra kinder, primaria, secundaria y preparatoria cerca de ti, con datos abiertos de OpenStreetMap.</p>
+    </div>
+  </a>
+  <button class="btn-menu" id="btnMenu" aria-label="Abrir el menú de navegación" aria-haspopup="true" aria-expanded="false" aria-controls="menuNav">☰</button>
+  <nav class="menu" id="menuNav" aria-label="Navegación principal">
+    <a href="index.html"><img src="assets/icono-busqueda.png" alt=""> Inicio</a>
+    <a href="mapa.html"><img src="assets/icono-distancia.png" alt=""> Mapa</a>
+    <a href="eventos.html"><img src="assets/icono-eventos.png" alt=""> Eventos y cambios</a>
+    <a href="acerca.html"><img src="assets/icono-egresado.png" alt=""> Cómo funciona</a>
+    <button type="button" class="btn-instalar">📲 Descargar la app</button>
+  </nav>
+</header>
+<main>
+  <div class="aviso-datos">Los datos se consultan <strong>en vivo</strong> en OpenStreetMap. El nivel y el tipo (gratuita o de pago) se infieren de las etiquetas públicas del mapa; los costos casi nunca se publican: si no hay dato, la ficha dice «sin dato público» y hay que consultarlo con la escuela.</div>
+
+  <section class="panel" aria-label="Controles de búsqueda">
+    <div class="fila">
+      <span class="etiqueta"><img src="assets/icono-distancia.png" alt="" style="width:20px;height:20px;border-radius:50%;vertical-align:-5px;"> Radio de búsqueda:</span>
+      <span id="chipsRadio"></span>
+    </div>
+    <div class="fila">
+      <span class="etiqueta">Nivel educativo:</span>
+      <div class="niveles" id="filtroNivel">
+        <button type="button" class="nivel-btn" data-nivel="Todas"><img src="assets/icono-busqueda.png" alt="">Todas</button>
+        <button type="button" class="nivel-btn" data-nivel="Kinder"><img src="assets/icono-kinder.png" alt="">Kinder</button>
+        <button type="button" class="nivel-btn" data-nivel="Primaria"><img src="assets/icono-primaria.png" alt="">Primaria</button>
+        <button type="button" class="nivel-btn" data-nivel="Secundaria"><img src="assets/icono-secundaria.png" alt="">Secundaria</button>
+        <button type="button" class="nivel-btn" data-nivel="Preparatoria"><img src="assets/icono-preparatoria.png" alt="">Preparatoria</button>
+      </div>
+    </div>
+    <div class="fila">
+      <span class="etiqueta">Tipo de escuela:</span>
+      <button type="button" class="tipo-btn activo" data-tipo="todas"><img src="assets/icono-busqueda.png" alt=""> Todas</button>
+      <button type="button" class="tipo-btn" data-tipo="gratuita"><img src="assets/icono-gratuitas.png" alt=""> Gratuitas</button>
+      <button type="button" class="tipo-btn" data-tipo="pago"><img src="assets/icono-costos.png" alt=""> De pago</button>
+      <button type="button" class="tipo-btn" data-tipo="sindato"><img src="assets/icono-radar.png" alt=""> Sin dato</button>
+    </div>
+    <div class="fila">
+      <span class="etiqueta">Ordenar por:</span>
+      <button type="button" class="orden-btn activo" data-orden="cerca"><img src="assets/icono-distancia.png" alt=""> Cercanía</button>
+      <button type="button" class="orden-btn" data-orden="fama"><img src="assets/icono-eventos.png" alt=""> ★ Mejor fama</button>
+    </div>
+    <div class="fila">
+      <button id="btnGps" class="destacado"><img src="assets/icono-radar.png" alt=""> Usar mi ubicación</button>
+      <button id="btnBuscar" class="destacado"><img src="assets/icono-busqueda.png" alt=""> Buscar escuelas</button>
+      <button type="button" class="btn-instalar">📲 Descargar la app</button>
+    </div>
+    <div class="fila">
+      <div class="buscador">
+        <img src="assets/icono-busqueda.png" alt="">
+        <input type="search" id="buscar" placeholder="Filtrar por nombre de escuela…">
+      </div>
+    </div>
+  </section>
+
+  <p class="estado-busqueda" id="estadoBusqueda" role="status"></p>
+
+  <div class="titulo-seccion"><img src="assets/icono-busqueda.png" alt=""> Escuelas cerca de ti <span id="conteo" style="font-size:.95rem; color:var(--texto2);"></span></div>
+  <section id="lista"></section>
+</main>
+
+<footer>
+  <p><img src="assets/icono-busqueda.png" alt=""> <strong>Fuente de datos:</strong> © OpenStreetMap y colaboradores (licencia ODbL), consultado en vivo con Overpass API. El nivel y el tipo de cada escuela se infieren de sus etiquetas públicas; lo que no trae etiqueta se muestra como «sin dato público».</p>
+  <p>Serch Education no inventa costos, beneficios ni servicios: si una escuela no los publica en OpenStreetMap, consúltalos directamente con ella.</p>
+</footer>
+<script src="app.js"></script>
+<script>
+"use strict";
+/* ---------- Inicio: buscador de escuelas ---------- */
+let radioKm = 5;
+let nivelFiltro = "Todas";
+let tipoFiltro = "todas";
+let orden = "cerca";
+
+/* Filtros recordados durante la sesión. */
+try {
+  const f = JSON.parse(sessionStorage.getItem("serch_filtros") || "null");
+  if (f) {
+    if (RADIOS_KM.includes(f.radioKm)) radioKm = f.radioKm;
+    if (f.nivel) nivelFiltro = f.nivel;
+    if (f.tipo) tipoFiltro = f.tipo;
+    if (f.orden) orden = f.orden;
+  }
+} catch (e) { /* filtros por defecto */ }
+function guardarFiltros() {
+  try { sessionStorage.setItem("serch_filtros", JSON.stringify({ radioKm, nivel: nivelFiltro, tipo: tipoFiltro, orden })); } catch (e) { /* sin sessionStorage */ }
+}
+
+/* Chips de radio: 1, 3, 5, 10, 20 y 50 km. */
+const chipsRadio = $("#chipsRadio");
+chipsRadio.innerHTML = RADIOS_KM.map(r =>
+  '<button type="button" class="chip-radio' + (r === radioKm ? " activo" : "") + '" data-radio="' + r + '">' + r + " km</button>"
+).join(" ");
+chipsRadio.querySelectorAll(".chip-radio").forEach(b => b.addEventListener("click", () => {
+  radioKm = parseInt(b.dataset.radio, 10);
+  chipsRadio.querySelectorAll(".chip-radio").forEach(x => x.classList.toggle("activo", x === b));
+  guardarFiltros();
+  buscar();
+}));
+document.querySelectorAll("#filtroNivel .nivel-btn").forEach(b => {
+  b.classList.toggle("activo", b.dataset.nivel === nivelFiltro);
+  b.addEventListener("click", () => {
+    nivelFiltro = b.dataset.nivel;
+    document.querySelectorAll("#filtroNivel .nivel-btn").forEach(x => x.classList.toggle("activo", x === b));
+    guardarFiltros();
+    render();
+  });
+});
+document.querySelectorAll(".tipo-btn").forEach(b => {
+  b.classList.toggle("activo", b.dataset.tipo === tipoFiltro);
+  b.addEventListener("click", () => {
+    tipoFiltro = b.dataset.tipo;
+    document.querySelectorAll(".tipo-btn").forEach(x => x.classList.toggle("activo", x === b));
+    guardarFiltros();
+    render();
+  });
+});
+document.querySelectorAll(".orden-btn").forEach(b => {
+  b.classList.toggle("activo", b.dataset.orden === orden);
+  b.addEventListener("click", () => {
+    orden = b.dataset.orden;
+    document.querySelectorAll(".orden-btn").forEach(x => x.classList.toggle("activo", x === b));
+    guardarFiltros();
+    render();
+  });
+});
+$("#buscar").addEventListener("input", render);
+
+function estado(html) { $("#estadoBusqueda").innerHTML = html; }
+
+async function buscar() {
+  estado("Consultando escuelas en <strong>" + radioKm + " km</strong> alrededor de " + esc(origen.etiqueta) + "… (datos en vivo de OpenStreetMap)");
+  $("#btnBuscar").disabled = true;
+  try {
+    await buscarEscuelas(radioKm);
+    estado("Se encontraron <strong>" + resultados.length + " escuelas</strong> en " + radioKm + " km alrededor de " + esc(origen.etiqueta) + ".");
+  } catch (e) {
+    const guardado = cargarResultadosGuardados();
+    if (guardado && guardado.escuelas.length) {
+      estado('<span class="error">La consulta en vivo falló (Overpass no respondió).</span> Te muestro la última búsqueda guardada en esta sesión: <strong>' + guardado.escuelas.length + " escuelas</strong> en " + guardado.radioKm + " km.");
+    } else {
+      estado('<span class="error">La consulta a OpenStreetMap falló (Overpass no respondió tras reintentarlo).</span> Revisa tu conexión y toca «Buscar escuelas» para intentarlo de nuevo.');
+      resultados = [];
+    }
+  } finally {
+    $("#btnBuscar").disabled = false;
+  }
+  render();
+}
+
+function tarjetaEscuela(e, esLaMasCercana) {
+  const idUrl = encodeURIComponent(e.id);
+  return '<article class="tarjeta-est' + (esLaMasCercana ? " cercana" : "") + '">' +
+    '<div class="est-top">' +
+      '<img class="est-icono" src="' + iconoDeNivel(e.nivel) + '" alt="">' +
+      "<div>" +
+        '<div class="est-nombre"><a href="escuela.html?id=' + idUrl + '">' + esc(e.nombre) + "</a></div>" +
+        '<div class="est-meta">a ' + e.dist.toFixed(1) + " km de " + esc(origen.etiqueta) +
+          (e.direccion ? " · " + esc(e.direccion) : "") + "</div>" +
+        '<div class="etiquetas">' +
+          '<span class="insignia">' + esc(e.nivel) + "</span>" +
+          '<span class="insignia ' + e.tipo + '">' + esc(e.tipoTexto) + "</span>" +
+          (e.investigado ? '<span class="insignia investigado">Dato investigado</span>' : "") +
+        "</div>" +
+        (e.investigado && e.investigado.costos
+          ? '<div class="est-meta"><strong style="color:var(--texto);">Costo:</strong> ' + esc(e.investigado.costos) + ' <span style="color:var(--dorado);">(dato investigado)</span></div>'
+          : "") +
+        (e.investigado && e.investigado.valoracion
+          ? '<div class="est-meta">' + pintarEstrellas(e.investigado.valoracion.estrellas) +
+            ' <strong style="color:var(--texto);">' + e.investigado.valoracion.estrellas.toFixed(1) + "</strong>" +
+            (e.investigado.valoracion.opiniones !== null ? " · " + e.investigado.valoracion.opiniones + " opiniones" : "") +
+            ' <span style="color:var(--dorado);">(fama investigada)</span></div>'
+          : "") +
+      "</div>" +
+      (esLaMasCercana ? '<span class="insignia" style="margin-left:auto;">★ MÁS CERCANA</span>' : "") +
+    "</div>" +
+    '<div class="est-acciones">' +
+      '<a class="boton destacado" href="escuela.html?id=' + idUrl + '"><img src="assets/icono-egresado.png" alt=""> Detalle</a>' +
+      '<a class="boton" href="' + enlaceGoogleMapsEsc(e) + '" target="_blank" rel="noopener"><img src="assets/icono-distancia.png" alt=""> Cómo llegar</a>' +
+      '<a class="boton" href="mapa.html"><img src="assets/icono-radar.png" alt=""> Ver en el mapa</a>' +
+    "</div>" +
+  "</article>";
+}
+function famaDe(e) {
+  return e.investigado && e.investigado.valoracion ? e.investigado.valoracion.estrellas : -1;
+}
+function render() {
+  const q = normalizar($("#buscar").value || "");
+  let arr = resultados;
+  if (nivelFiltro !== "Todas") arr = arr.filter(e => e.nivel === nivelFiltro);
+  if (tipoFiltro !== "todas") arr = arr.filter(e => e.tipo === tipoFiltro);
+  if (q) arr = arr.filter(e => normalizar(e.nombre).includes(q));
+  if (orden === "fama") {
+    // Mejor fama: estrellas de la valoración investigada, de mayor a
+    // menor; las escuelas sin valoración investigada van al final.
+    arr = [...arr].sort((a, b) => (famaDe(b) - famaDe(a)) || (a.dist - b.dist));
+  }
+  $("#conteo").textContent = arr.length
+    ? "· " + arr.length + " resultado(s), por " + (orden === "fama" ? "mejor fama" : "cercanía")
+    : "";
+  if (!resultados.length) { $("#lista").innerHTML = ""; return; }
+  $("#lista").innerHTML = arr.length
+    ? arr.map((e, i) => tarjetaEscuela(e, i === 0 && orden === "cerca" && !q && nivelFiltro === "Todas" && tipoFiltro === "todas")).join("")
+    : '<section class="panel"><p style="line-height:1.55;">Ninguna escuela de la búsqueda coincide con esos filtros. Prueba con otro nivel, otro tipo o un radio más grande.</p></section>';
+}
+
+$("#btnBuscar").addEventListener("click", buscar);
+$("#btnGps").addEventListener("click", () => {
+  estado("Buscando tu ubicación…");
+  pedirUbicacion(
+    () => buscar(),
+    error => { estado('<span class="error">' + esc(error) + "</span>"); }
+  );
+});
+
+/* ---------- Arranque: búsqueda en vivo con el radio elegido ---------- */
+buscar();
+</script>
+</body>
+</html>

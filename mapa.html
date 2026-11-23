@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa de escuelas — Serch Education</title>
+<meta name="description" content="Mapa de Serch Education: escuelas cerca de ti con el círculo del radio de búsqueda y tu marca «Estás aquí».">
+<link rel="icon" type="image/png" href="assets/icono-busqueda.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d2137">
+<link rel="stylesheet" href="estilos.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body>
+<header>
+  <a class="marca" href="index.html" aria-label="Serch Education — ir al inicio">
+    <img class="logo" src="assets/icono-busqueda.png" alt="Logo de Serch Education">
+    <div>
+      <h1><span class="serch">Serch</span> <span class="edu">Education</span></h1>
+      <p class="saludo">Hola · <span class="fecha-hoy"></span></p>
+      <p>El mapa de escuelas: el círculo marca tu radio de búsqueda y el punto azul, dónde estás.</p>
+    </div>
+  </a>
+  <button class="btn-menu" id="btnMenu" aria-label="Abrir el menú de navegación" aria-haspopup="true" aria-expanded="false" aria-controls="menuNav">☰</button>
+  <nav class="menu" id="menuNav" aria-label="Navegación principal">
+    <a href="index.html"><img src="assets/icono-busqueda.png" alt=""> Inicio</a>
+    <a href="mapa.html"><img src="assets/icono-distancia.png" alt=""> Mapa</a>
+    <a href="eventos.html"><img src="assets/icono-eventos.png" alt=""> Eventos y cambios</a>
+    <a href="acerca.html"><img src="assets/icono-egresado.png" alt=""> Cómo funciona</a>
+    <button type="button" class="btn-instalar">📲 Descargar la app</button>
+  </nav>
+</header>
+<main>
+  <div class="titulo-seccion"><img src="assets/icono-distancia.png" alt=""> Mapa de escuelas</div>
+
+  <section class="panel">
+    <div class="fila">
+      <button id="btnMiUbicacion" class="destacado"><img src="assets/icono-radar.png" alt=""> Mi ubicación</button>
+      <span id="mapaMsg" style="font-size:.88rem; color:var(--texto2);">El mapa arranca en el Instituto Juventud del Estado de México (Naucalpan de Juárez). Toca «Mi ubicación» para centrarlo en ti.</span>
+    </div>
+    <div class="fila">
+      <span class="etiqueta">Radio del círculo (al cambiarlo se vuelve a consultar OpenStreetMap):</span>
+      <span id="chipsRadioMapa"></span>
+    </div>
+  </section>
+
+  <div id="mapa" role="application" aria-label="Mapa de escuelas"></div>
+  <div id="mapaRespaldo" style="margin-top:14px;"></div>
+</main>
+
+<footer>
+  <p><img src="assets/icono-busqueda.png" alt=""> <strong>Fuente de datos:</strong> © OpenStreetMap y colaboradores (licencia ODbL), consultado en vivo con Overpass API.</p>
+  <p>Mapa © OpenStreetMap y colaboradores. Si el mapa no carga, abre la ruta a cada escuela con el botón «Cómo llegar» de su ficha.</p>
+</footer>
+<script src="app.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+"use strict";
+/* ---------- Mapa con Leaflet: marca del usuario, círculo del radio
+   seleccionado y marcadores de las escuelas de la búsqueda. ---------- */
+let mapa = null, marcadorUsuario = null, circuloPrecision = null, circuloRadio = null;
+let capaEscuelas = null;
+let radioActual = 5;
+
+const guardadoIni = cargarResultadosGuardados();
+if (guardadoIni && RADIOS_KM.includes(guardadoIni.radioKm)) radioActual = guardadoIni.radioKm;
+
+/* Chips de radio del mapa. */
+const chips = $("#chipsRadioMapa");
+function pintarChips() {
+  chips.innerHTML = RADIOS_KM.map(r =>
+    '<button type="button" class="chip-radio' + (r === radioActual ? " activo" : "") + '" data-radio="' + r + '">' + r + " km</button>"
+  ).join(" ");
+  chips.querySelectorAll(".chip-radio").forEach(b => b.addEventListener("click", async () => {
+    radioActual = parseInt(b.dataset.radio, 10);
+    pintarChips();
+    $("#mapaMsg").textContent = "Consultando escuelas en " + radioActual + " km…";
+    try {
+      await buscarEscuelas(radioActual);
+      $("#mapaMsg").textContent = "Se encontraron " + resultados.length + " escuelas en " + radioActual + " km.";
+    } catch (e) {
+      $("#mapaMsg").textContent = "La consulta en vivo falló; se mantiene el círculo y las escuelas ya cargadas.";
+    }
+    dibujarCirculo(true);
+    dibujarEscuelas();
+  }));
+}
+pintarChips();
+
+function mostrarRespaldo(motivo) {
+  $("#mapa").style.display = "none";
+  $("#mapaRespaldo").innerHTML =
+    '<section class="panel">' +
+      '<div class="titulo-seccion"><img src="assets/icono-distancia.png" alt=""> El mapa no pudo cargar</div>' +
+      '<p style="font-size:.92rem; line-height:1.55;">' + esc(motivo) + ' Puedes abrir la ruta a cada escuela desde su ficha:</p>' +
+      '<div class="pasos" style="margin-top:10px;">' +
+        resultados.map(e => '<div class="paso"><img src="' + iconoDeNivel(e.nivel) + '" alt=""><div><strong>' + esc(e.nombre) + '</strong>' +
+          '<span>' + esc(e.nivel) + ' · ' + esc(e.tipoTexto) + ' · ' +
+          '<a href="' + enlaceGoogleMapsEsc(e) + '" target="_blank" rel="noopener">Cómo llegar</a> · ' +
+          '<a href="escuela.html?id=' + encodeURIComponent(e.id) + '">Detalle</a></span></div></div>').join("") +
+      "</div>" +
+    "</section>";
+}
+
+/* Marca «Estás aquí»: punto azul con anillo pulsante, por encima de
+   los demás marcadores, con su círculo de precisión si lo hay. */
+function marcarUsuario(centrar, precision) {
+  if (!mapa) return;
+  if (marcadorUsuario) marcadorUsuario.remove();
+  if (circuloPrecision) { circuloPrecision.remove(); circuloPrecision = null; }
+  if (typeof precision === "number" && precision > 0) {
+    circuloPrecision = L.circle([origen.lat, origen.lng], {
+      radius: precision, color: "#1a73e8", weight: 1, opacity: .55,
+      fillColor: "#1a73e8", fillOpacity: .12, interactive: false
+    }).addTo(mapa);
+  }
+  marcadorUsuario = L.marker([origen.lat, origen.lng], {
+    zIndexOffset: 1000,
+    icon: L.divIcon({
+      className: "",
+      html: '<div class="punto-usuario"><span class="punto-usuario-anillo"></span><span class="punto-usuario-centro"></span></div>',
+      iconSize: [22, 22], iconAnchor: [11, 11]
+    })
+  }).addTo(mapa).bindPopup("Estás aquí");
+  if (centrar) mapa.setView([origen.lat, origen.lng], 14);
+}
+
+/* El círculo expansivo del radio elegido alrededor del origen. */
+function dibujarCirculo(encuadrar) {
+  if (!mapa) return;
+  if (circuloRadio) circuloRadio.remove();
+  circuloRadio = L.circle([origen.lat, origen.lng], {
+    radius: radioActual * 1000,
+    color: "#f5b921", weight: 2, opacity: .9,
+    fillColor: "#38b6e8", fillOpacity: .08
+  }).addTo(mapa);
+  if (encuadrar) mapa.fitBounds(circuloRadio.getBounds(), { padding: [20, 20] });
+}
+
+function popupEscuela(e) {
+  return '<div class="pop-nombre">' + esc(e.nombre) + "</div>" +
+    esc(e.nivel) + " · " + esc(e.tipoTexto) + "<br>" +
+    (e.investigado ? "Con <strong>dato investigado</strong> en su ficha<br>" : "") +
+    "a " + e.dist.toFixed(1) + " km" +
+    ' · <a href="escuela.html?id=' + encodeURIComponent(e.id) + '">Detalle</a>' +
+    ' · <a href="' + enlaceGoogleMapsEsc(e) + '" target="_blank" rel="noopener">Cómo llegar</a>';
+}
+function dibujarEscuelas() {
+  if (!mapa) return;
+  if (capaEscuelas) capaEscuelas.remove();
+  capaEscuelas = L.layerGroup();
+  for (const e of resultados) {
+    const m = L.marker([e.lat, e.lng], {
+      icon: L.icon({ iconUrl: iconoDeNivel(e.nivel), iconSize: [36, 36], iconAnchor: [18, 18], popupAnchor: [0, -18], className: "marcador-img" })
+    });
+    m.bindPopup(popupEscuela(e));
+    capaEscuelas.addLayer(m);
+  }
+  capaEscuelas.addTo(mapa);
+}
+
+function localizarUsuario() {
+  const msg = $("#mapaMsg");
+  if (!navigator.geolocation) {
+    msg.textContent = hayGPS()
+      ? "Este navegador no ofrece geolocalización; se mantiene la ubicación fijada antes en esta sesión."
+      : "Este navegador no ofrece geolocalización; el mapa se queda en el Instituto Juventud del Estado de México como referencia.";
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    async pos => {
+      fijarOrigen({ lat: pos.coords.latitude, lng: pos.coords.longitude, etiqueta: "tu ubicación" });
+      marcarUsuario(false, pos.coords.accuracy);
+      msg.textContent = "Ubicación detectada: estás marcado con el punto azul. Recalculando escuelas desde donde estás…";
+      try {
+        await buscarEscuelas(radioActual);
+        msg.textContent = "Ubicación detectada: " + resultados.length + " escuelas en " + radioActual + " km desde donde estás.";
+      } catch (e) {
+        msg.textContent = "Ubicación detectada, pero la consulta en vivo falló; se muestran las escuelas ya cargadas.";
+      }
+      dibujarCirculo(true);
+      dibujarEscuelas();
+    },
+    () => {
+      msg.textContent = hayGPS()
+        ? "No se pudo actualizar tu ubicación (permiso denegado o señal débil); se mantiene la fijada antes en esta sesión."
+        : "No se pudo obtener tu ubicación (permiso denegado o señal débil); el mapa se queda en el Instituto Juventud del Estado de México como referencia. Puedes intentarlo de nuevo con el botón «Mi ubicación».";
+    },
+    { enableHighAccuracy: true, timeout: 12000 }
+  );
+}
+$("#btnMiUbicacion").addEventListener("click", () => {
+  $("#mapaMsg").textContent = "Buscando tu ubicación…";
+  localizarUsuario();
+});
+
+/* ---------- Arranque ---------- */
+(async function init() {
+  if (typeof L === "undefined") {
+    mostrarRespaldo("No se pudo cargar la librería del mapa (revisa tu conexión).");
+    return;
+  }
+  mapa = L.map("mapa").setView([origen.lat, origen.lng], 13);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "© OpenStreetMap y colaboradores"
+  }).addTo(mapa);
+  if (!resultados.length) {
+    $("#mapaMsg").textContent = "Consultando escuelas en " + radioActual + " km…";
+    try {
+      await buscarEscuelas(radioActual);
+      $("#mapaMsg").textContent = "Se encontraron " + resultados.length + " escuelas en " + radioActual + " km alrededor de " + origen.etiqueta + ".";
+    } catch (e) {
+      $("#mapaMsg").textContent = "La consulta en vivo falló. Toca un radio para reintentar o busca primero en el Inicio.";
+    }
+  } else {
+    $("#mapaMsg").textContent = resultados.length + " escuelas cargadas en " + radioActual + " km alrededor de " + origen.etiqueta + ".";
+  }
+  dibujarCirculo(true);
+  marcarUsuario(false);
+  dibujarEscuelas();
+  localizarUsuario();
+})();
+</script>
+</body>
+</html>

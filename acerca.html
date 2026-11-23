@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cómo funciona — Serch Education</title>
+<meta name="description" content="Cómo funciona Serch Education: datos en vivo de OpenStreetMap, datos investigados, la vigilancia semanal y los límites honestos de la información.">
+<link rel="icon" type="image/png" href="assets/icono-busqueda.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d2137">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<header>
+  <a class="marca" href="index.html" aria-label="Serch Education — ir al inicio">
+    <img class="logo" src="assets/icono-busqueda.png" alt="Logo de Serch Education">
+    <div>
+      <h1><span class="serch">Serch</span> <span class="edu">Education</span></h1>
+      <p class="saludo">Hola · <span class="fecha-hoy"></span></p>
+      <p>Cómo funciona Serch Education y qué tan lejos llegan sus datos.</p>
+    </div>
+  </a>
+  <button class="btn-menu" id="btnMenu" aria-label="Abrir el menú de navegación" aria-haspopup="true" aria-expanded="false" aria-controls="menuNav">☰</button>
+  <nav class="menu" id="menuNav" aria-label="Navegación principal">
+    <a href="index.html"><img src="assets/icono-busqueda.png" alt=""> Inicio</a>
+    <a href="mapa.html"><img src="assets/icono-distancia.png" alt=""> Mapa</a>
+    <a href="eventos.html"><img src="assets/icono-eventos.png" alt=""> Eventos y cambios</a>
+    <a href="acerca.html"><img src="assets/icono-egresado.png" alt=""> Cómo funciona</a>
+    <button type="button" class="btn-instalar">📲 Descargar la app</button>
+  </nav>
+</header>
+<main>
+  <div class="titulo-seccion"><img src="assets/icono-busqueda.png" alt=""> Cómo funciona Serch Education</div>
+  <section class="panel">
+    <div class="pasos">
+      <div class="paso">
+        <img src="assets/icono-radar.png" alt="">
+        <div><strong>1. Búsqueda en vivo, sin base de datos vieja</strong>
+        <span>Cada búsqueda consulta en el momento <strong>OpenStreetMap</strong> (vía Overpass API) alrededor de tu ubicación o del centro por defecto — el <strong>Instituto Juventud del Estado de México</strong>, en Naucalpan de Juárez — dentro del radio que elijas: 1, 3, 5, 10, 20 o 50 km. El <a href="mapa.html">mapa</a> dibuja ese círculo y tu marca «Estás aquí».</span></div>
+      </div>
+      <div class="paso">
+        <img src="assets/icono-preparatoria.png" alt="">
+        <div><strong>2. El nivel se infiere, no se decreta</strong>
+        <span>OpenStreetMap no siempre dice si una escuela es kinder, primaria, secundaria o preparatoria. Serch Education lo infiere de las etiquetas del mapa (tipo de lugar, niveles ISCED y el nombre en español: «jardín de niños», «CBTis», «Conalep»…). Es una <strong>heurística</strong>: cuando no se puede saber, la ficha dice «Nivel sin especificar» en vez de adivinar.</span></div>
+      </div>
+      <div class="paso">
+        <img src="assets/icono-gratuitas.png" alt="">
+        <div><strong>3. Gratuita o de pago, solo si el mapa lo dice</strong>
+        <span>El tipo sale de las etiquetas públicas del operador (<em>operator:type</em>) o de la etiqueta <em>fee</em>. Si no hay etiqueta, verás «Tipo sin dato público»: que no traiga la etiqueta <strong>no</strong> significa que cobre.</span></div>
+      </div>
+      <div class="paso">
+        <img src="assets/icono-costos.png" alt="">
+        <div><strong>4. Costos: casi nunca públicos</strong>
+        <span>Los montos de colegiatura casi nunca se publican en OpenStreetMap. Si no hay dato — de OSM ni de la investigación — la ficha dice «Costo: sin dato público — consúltalo con la escuela». <strong>Nunca inventamos costos, beneficios ni servicios.</strong></span></div>
+      </div>
+      <div class="paso">
+        <img src="assets/icono-egresado.png" alt="">
+        <div><strong>5. Datos investigados, marcados como tales</strong>
+        <span>Para las escuelas de la zona del IJEM, la asistente investiga y anota en un archivo del proyecto (<em>datos-extra.json</em>): costos, beneficios, servicios, eventos y promociones, y la <strong>fama</strong> (estrellas y número de opiniones de sus valoraciones públicas). En tarjetas y fichas esos datos tienen prioridad y se marcan <strong>«Dato investigado»</strong> con su fuente y fecha de consulta; lo de OpenStreetMap se marca como registro público.</span></div>
+      </div>
+      <div class="paso">
+        <img src="assets/icono-eventos.png" alt="">
+        <div><strong>6. Vigilancia semanal</strong>
+        <span>Una vez a la semana se toma una «foto» de las escuelas en 10 km alrededor del IJEM y se compara con la anterior: altas, bajas y cambios de nombre, tipo, sitio web o teléfono quedan anotados en la página de <a href="eventos.html">Eventos y cambios</a>.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="titulo-seccion"><img src="assets/icono-beneficios.png" alt=""> Fuentes y límites honestos</div>
+  <section class="panel">
+    <div class="pasos">
+      <div class="paso">
+        <img src="assets/icono-beneficios.png" alt="">
+        <div><strong>Fuentes</strong>
+        <span>© OpenStreetMap y colaboradores (licencia ODbL), consultado en vivo con Overpass API; mapa © OpenStreetMap. Los datos investigados traen su propia fuente y fecha en cada ficha.</span></div>
+      </div>
+      <div class="paso">
+        <img src="assets/icono-busqueda.png" alt="">
+        <div><strong>Lo que puede fallar</strong>
+        <span>OpenStreetMap es un mapa comunitario: puede faltar una escuela nueva, sobrar una cerrada o faltar su sitio web. La clasificación de nivel es heurística y la de tipo depende de etiquetas que muchas escuelas no tienen. La fama investigada refleja las valoraciones públicas de su fuente en la fecha de consulta, no una evaluación de Serch Education.</span></div>
+      </div>
+      <div class="paso">
+        <img src="assets/icono-kinder.png" alt="">
+        <div><strong>Verifica antes de decidir</strong>
+        <span>Usa Serch Education para descubrir y comparar opciones, y confirma costos, inscripciones y servicios directamente con cada escuela antes de decidir.</span></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p><img src="assets/icono-busqueda.png" alt=""> <strong>Fuente de datos:</strong> © OpenStreetMap y colaboradores (licencia ODbL), consultado en vivo con Overpass API. El nivel y el tipo de cada escuela se infieren de sus etiquetas públicas; lo que no trae etiqueta se muestra como «sin dato público».</p>
+  <p>Serch Education no inventa costos, beneficios ni servicios: si una escuela no los publica en OpenStreetMap ni están investigados, consúltalos directamente con ella.</p>
+</footer>
+<script src="app.js"></script>
+</body>
+</html>

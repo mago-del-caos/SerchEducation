@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ficha de escuela — Serch Education</title>
+<meta name="description" content="Ficha de una escuela en Serch Education: nivel, tipo, costo y servicios solo con los datos públicos de OpenStreetMap.">
+<link rel="icon" type="image/png" href="assets/icono-busqueda.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d2137">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<header>
+  <a class="marca" href="index.html" aria-label="Serch Education — ir al inicio">
+    <img class="logo" src="assets/icono-busqueda.png" alt="Logo de Serch Education">
+    <div>
+      <h1><span class="serch">Serch</span> <span class="edu">Education</span></h1>
+      <p class="saludo">Hola · <span class="fecha-hoy"></span></p>
+      <p>La ficha de la escuela, solo con datos públicos: lo que no está publicado se dice tal cual.</p>
+    </div>
+  </a>
+  <button class="btn-menu" id="btnMenu" aria-label="Abrir el menú de navegación" aria-haspopup="true" aria-expanded="false" aria-controls="menuNav">☰</button>
+  <nav class="menu" id="menuNav" aria-label="Navegación principal">
+    <a href="index.html"><img src="assets/icono-busqueda.png" alt=""> Inicio</a>
+    <a href="mapa.html"><img src="assets/icono-distancia.png" alt=""> Mapa</a>
+    <a href="eventos.html"><img src="assets/icono-eventos.png" alt=""> Eventos y cambios</a>
+    <a href="acerca.html"><img src="assets/icono-egresado.png" alt=""> Cómo funciona</a>
+    <button type="button" class="btn-instalar">📲 Descargar la app</button>
+  </nav>
+</header>
+<main>
+  <section class="panel detalle-pag" id="ficha"></section>
+  <div class="est-acciones" style="margin-bottom:16px;">
+    <a class="boton" href="index.html"><img src="assets/icono-busqueda.png" alt=""> Volver a la búsqueda</a>
+    <a class="boton" href="mapa.html"><img src="assets/icono-distancia.png" alt=""> Ver en el mapa</a>
+  </div>
+</main>
+
+<footer>
+  <p><img src="assets/icono-busqueda.png" alt=""> <strong>Fuente de datos:</strong> © OpenStreetMap y colaboradores (licencia ODbL), consultado en vivo con Overpass API. El nivel y el tipo se infieren de las etiquetas públicas del mapa.</p>
+  <p>Serch Education no inventa costos, beneficios ni servicios: si una escuela no los publica en OpenStreetMap, consúltalos directamente con ella.</p>
+</footer>
+<script src="app.js"></script>
+<script>
+"use strict";
+/* ---------- Ficha de escuela (datos de la búsqueda, en sessionStorage) ---------- */
+const params = new URLSearchParams(location.search);
+const e = escuelaPorId(params.get("id") || "");
+const ficha = $("#ficha");
+
+if (!e) {
+  ficha.innerHTML =
+    '<div class="titulo-seccion"><img src="assets/icono-busqueda.png" alt=""> Escuela no encontrada</div>' +
+    '<p style="line-height:1.6;">Esta ficha vive de la búsqueda de la sesión y ya no está disponible (pudo ' +
+    'cerrarse la pestaña o venir de otra búsqueda). Vuelve al <a href="index.html" style="color:var(--acento); font-weight:600;">Inicio</a>, ' +
+    'busca de nuevo y toca «Detalle» en la escuela que quieras ver.</p>';
+} else {
+  const inv = e.investigado || null;
+  const filas = [];
+  filas.push(["Nivel educativo", esc(e.nivel) + ' <span style="color:var(--texto2);">(inferido de las etiquetas de OpenStreetMap)</span>']);
+  filas.push(["Tipo", esc(e.tipoTexto) + ' <span style="color:var(--texto2);">(registro público de OpenStreetMap)</span>']);
+  if (inv && inv.costos) {
+    filas.push(["Costo", esc(inv.costos) + ' <span style="color:var(--dorado);">(dato investigado)</span>']);
+  } else {
+    filas.push(["Costo", e.costo ? esc(e.costo) + ' <span style="color:var(--texto2);">(registro público de OpenStreetMap)</span>' : "Sin dato público — consúltalo con la escuela"]);
+  }
+  if (e.dist !== null) filas.push(["Distancia", e.dist.toFixed(1) + " km desde " + esc(origen.etiqueta) + " (en línea recta)"]);
+  for (const s of e.servicios) {
+    const valor = s.etiqueta === "Sitio web"
+      ? '<a href="' + esc(s.valor) + '" target="_blank" rel="noopener">' + esc(s.valor) + "</a>"
+      : esc(s.valor);
+    filas.push([s.etiqueta, valor]);
+  }
+  if (!e.servicios.length && !(inv && ((inv.beneficios && inv.beneficios.length) || (inv.servicios && inv.servicios.length)))) {
+    filas.push(["Beneficios y servicios", "Sin dato público en OpenStreetMap ni en los datos investigados"]);
+  }
+
+  /* --- Bloques investigados: datos, fama y eventos --- */
+  let bloquesInv = "";
+  const fuenteFecha = (fuente, fecha) =>
+    '<p class="inv-fuente">' +
+    (fuente ? 'Fuente: ' + (fuente.startsWith("http")
+      ? '<a href="' + esc(fuente) + '" target="_blank" rel="noopener">' + esc(fuente) + "</a>"
+      : esc(fuente)) : "") +
+    (fecha ? (fuente ? " · " : "") + "Consultado el " + esc(fecha) : "") + "</p>";
+  if (inv && ((inv.beneficios && inv.beneficios.length) || (inv.servicios && inv.servicios.length))) {
+    bloquesInv += '<div class="panel-investigado"><div class="inv-titulo">Datos investigados</div>';
+    if (inv.beneficios && inv.beneficios.length) {
+      bloquesInv += "<p><strong>Beneficios:</strong></p><ul>" +
+        inv.beneficios.map(b => "<li>" + esc(b) + "</li>").join("") + "</ul>";
+    }
+    if (inv.servicios && inv.servicios.length) {
+      bloquesInv += "<p><strong>Servicios:</strong></p><ul>" +
+        inv.servicios.map(s => "<li>" + esc(s) + "</li>").join("") + "</ul>";
+    }
+    bloquesInv += fuenteFecha(inv.fuente, inv.fecha) + "</div>";
+  }
+  if (inv && inv.valoracion) {
+    const v = inv.valoracion;
+    bloquesInv += '<div class="panel-investigado"><div class="inv-titulo">Fama · valoración investigada</div>' +
+      '<p style="font-size:1.05rem;">' + pintarEstrellas(v.estrellas).replace("estrellas-ver", "estrellas-ver grande") +
+      ' <strong>' + v.estrellas.toFixed(1) + "</strong> de 5" +
+      (v.opiniones !== null ? " · " + v.opiniones + " opiniones" : "") + "</p>" +
+      fuenteFecha(v.fuente, v.fecha) + "</div>";
+  }
+  if (inv && inv.eventos && inv.eventos.length) {
+    bloquesInv += '<div class="panel-investigado"><div class="inv-titulo">Eventos y promociones</div>' +
+      inv.eventos.map(ev =>
+        '<p style="line-height:1.55; margin-top:6px;"><strong>' + esc(ev.titulo) + "</strong>" +
+        (ev.fecha ? ' <span style="color:var(--dorado);">(' + esc(ev.fecha) + ")</span>" : "") +
+        (ev.descripcion ? "<br><span style='color:var(--texto2);'>" + esc(ev.descripcion) + "</span>" : "") + "</p>"
+      ).join("") +
+      fuenteFecha(inv.fuente, inv.fecha) + "</div>";
+  }
+
+  ficha.innerHTML =
+    '<div class="est-top">' +
+      '<img class="est-icono" src="' + iconoDeNivel(e.nivel) + '" alt="">' +
+      "<div><h2>" + esc(e.nombre) + "</h2>" +
+      '<div class="etiquetas"><span class="insignia">' + esc(e.nivel) + '</span>' +
+      '<span class="insignia ' + e.tipo + '">' + esc(e.tipoTexto) + "</span>" +
+      (inv ? '<span class="insignia investigado">Dato investigado</span>' : "") + "</div></div>" +
+    "</div>" +
+    '<div style="margin-top:14px;">' +
+      filas.map(f => '<div class="dato-fila"><span class="dato-etq">' + esc(f[0]) + '</span><span>' + f[1] + "</span></div>").join("") +
+    "</div>" +
+    bloquesInv +
+    '<div class="est-acciones">' +
+      '<a class="boton destacado" href="' + enlaceGoogleMapsEsc(e) + '" target="_blank" rel="noopener"><img src="assets/icono-distancia.png" alt=""> Cómo llegar</a>' +
+      (e.website ? '<a class="boton" href="' + esc(e.website) + '" target="_blank" rel="noopener"><img src="assets/icono-busqueda.png" alt=""> Sitio web de la escuela</a>' : "") +
+    "</div>" +
+    '<p style="margin-top:14px; font-size:.85rem; color:var(--texto2); line-height:1.55;">Identificador en OpenStreetMap: ' + esc(e.id) +
+    '. Si un dato está mal o falta, se corrige en OpenStreetMap y Serch Education lo recoge en la siguiente consulta.</p>';
+  document.title = e.nombre + " — Serch Education";
+}
+</script>
+</body>
+</html>
