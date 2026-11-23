@@ -195,6 +195,35 @@ ok(domEventos.window.document.querySelector("#listaInvestigados").textContent.in
 ok(domEventos.window.document.querySelector("#listaInvestigados").textContent.includes("Benito Juárez"), "los eventos investigados van agrupados por escuela, con su nombre");
 ok(domEventos.window.document.querySelector("#listaInvestigados").textContent.includes("Consultado el 2026-11-20"), "el grupo muestra la fecha de consulta");
 
+/* ============ 7. Respaldo Overpass: el 1º falla, el 2º responde ============ */
+console.log("— Respaldo de intérpretes Overpass —");
+const llamadasOverpass = [];
+const domRespaldo = await cargarPagina("index.html", "", {
+  beforeParse(win) {
+    win.fetch = async (url) => {
+      const u = String(url);
+      if (u.includes("overpass")) {
+        llamadasOverpass.push(u);
+        if (u.includes("overpass-api.de")) throw new TypeError("fallo de red simulado");
+        return { ok: true, status: 200, json: async () => fixtureOverpass };
+      }
+      const cuerpo = u.includes("datos-extra.json") ? EXTRA
+        : u.includes("eventos.json") ? eventosReales : {};
+      return { ok: true, status: 200, json: async () => cuerpo };
+    };
+  }
+});
+await esperar(() => domRespaldo.window.document.querySelectorAll("#lista .tarjeta-est").length >= 6, "con el primer intérprete caído, la búsqueda termina con resultados del respaldo");
+ok(llamadasOverpass.length >= 2 &&
+   llamadasOverpass[0].includes("overpass-api.de") &&
+   llamadasOverpass[1].includes("overpass.kumi.systems"),
+   "se intentó primero overpass-api.de y luego el respaldo kumi.systems, sin intervención del usuario");
+const estadoRespaldo = domRespaldo.window.document.querySelector("#estadoBusqueda").textContent;
+ok(estadoRespaldo.includes("Se encontraron") && !estadoRespaldo.includes("falló"),
+   "sin error visible: el estado reporta las escuelas encontradas vía el respaldo");
+ok(domRespaldo.window.sessionStorage.getItem("serch_overpass_endpoint") === "https://overpass.kumi.systems/api/interpreter",
+   "se recuerda en sessionStorage el intérprete que funcionó (kumi.systems)");
+
 console.log("\nResultado: " + pasadas + " pasadas, " + falladas + " falladas");
 servidor.close();
 process.exit(falladas ? 1 : 0);
