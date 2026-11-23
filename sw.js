@@ -7,10 +7,10 @@
    Los servicios externos (Overpass API, solo del botón opcional
    «Actualizar en vivo», y los mosaicos del mapa de CARTO) NO se
    cachean aquí.
-   serch-v5: ruptura limpia de las cachés mezcladas que dejaron
+   serch-v6: ruptura limpia de las cachés mezcladas que dejaron
    las subidas rápidas de versiones anteriores.
    ============================================================ */
-const CACHE = "serch-v5";
+const CACHE = "serch-v6";
 const PROPIOS = [
   "./",
   "index.html",

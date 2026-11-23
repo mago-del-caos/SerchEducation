@@ -33,7 +33,7 @@
    ============================================================ */
 const CENTROS = {
   ijem: { lat: 19.4785, lng: -99.2396, etiqueta: "Instituto Juventud del Estado de México", direccion: "Calzada San Agustín 61, Rincón Echegaray, Naucalpan de Juárez" },
-  kinder: { lat: 19.49411, lng: -99.22223, etiqueta: "Jardín de Niños IJEM", direccion: "Av. del Paseo 19, Colón de Echegaray, Naucalpan de Juárez" }
+  kinder: { lat: 19.4941815, lng: -99.2199265, etiqueta: "Jardín de Niños IJEM", direccion: "Av. del Paseo 19, Colón de Echegaray, Naucalpan de Juárez" }
 };
 const CENTRO_DEFECTO = CENTROS.ijem;   // el centro inicial es el IJEM
 const RADIOS_KM = [1, 3, 5, 10, 20, 50];
