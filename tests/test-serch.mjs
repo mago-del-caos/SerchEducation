@@ -265,6 +265,89 @@ ok(wc.document.querySelector("#estadoBusqueda").textContent.includes("Jardín de
 ok(wc.document.querySelector('#selectorCentro .centro-btn[data-centro="kinder"]').classList.contains("activo"), "el interruptor marca activo «Jardín de Niños» tras el cambio");
 ok(wc.eval("centroActivo()") === "kinder" && wc.eval("origen.lat") === 19.49411, "el origen en memoria es el Jardín de Niños IJEM");
 
+/* ============ 9. Preferencias guardadas (localStorage) ============ */
+console.log("— Preferencias guardadas —");
+const domPrefs = await cargarPagina("index.html", "", {
+  beforeParse(win) { stubFetch(win); }
+});
+const wp = domPrefs.window;
+await esperar(() => wp.document.querySelectorAll("#lista .tarjeta-est").length >= 6, "el inicio sin preferencias pinta las escuelas por defecto");
+ok(!!wp.document.querySelector("#btnGuardarPrefs") && !!wp.document.querySelector("#btnRestablecerPrefs"),
+   "existen los botones «Guardar preferencias» y «Restablecer» junto a «Buscar escuelas»");
+/* Estado NO por defecto: Jardín, 10 km, Primaria, Gratuitas, Mejor fama. */
+wp.document.querySelector('#selectorCentro .centro-btn[data-centro="kinder"]').click();
+await esperar(() => wp.document.querySelector("#estadoBusqueda").textContent.includes("Se encontraron"),
+   "la búsqueda desde el Jardín terminó");
+wp.document.querySelector('.chip-radio[data-radio="10"]').click();
+await esperar(() => {
+  const g = JSON.parse(wp.sessionStorage.getItem("serch_resultados") || "null");
+  return g && g.radioKm === 10;
+}, "la búsqueda de 10 km quedó guardada en la sesión");
+wp.document.querySelector('.nivel-btn[data-nivel="Primaria"]').click();
+wp.document.querySelector('.tipo-btn[data-tipo="gratuita"]').click();
+wp.document.querySelector('.orden-btn[data-orden="fama"]').click();
+wp.document.querySelector("#btnGuardarPrefs").click();
+const prefsTxt = wp.localStorage.getItem("serch_preferencias");
+ok(!!prefsTxt, "guardar crea la clave serch_preferencias en localStorage");
+const prefsObj = JSON.parse(prefsTxt || "{}");
+ok(prefsObj.centro === "kinder" && prefsObj.radioKm === 10 && prefsObj.nivel === "Primaria" &&
+   prefsObj.tipo === "gratuita" && prefsObj.orden === "fama",
+   "lo guardado es el estado elegido (Jardín, 10 km, Primaria, Gratuitas, Mejor fama)");
+ok(!("texto" in prefsObj) && !("buscar" in prefsObj) && Object.keys(prefsObj).length === 5,
+   "NO se guarda el texto del buscador por nombre (solo centro, radio, nivel, tipo y orden)");
+ok(wp.document.querySelector("#btnGuardarPrefs").textContent.includes("guardadas"),
+   "el botón confirma en el acto: «Preferencias guardadas ✓», sin alert");
+
+/* «Recarga»: ventana nueva con las preferencias sembradas en
+   localStorage; todo debe arrancar aplicado y buscando con ellas. */
+const domPrefs2 = await cargarPagina("index.html", "", {
+  beforeParse(win) {
+    stubFetch(win);
+    win.localStorage.setItem("serch_preferencias", prefsTxt);
+  }
+});
+const wp2 = domPrefs2.window;
+await esperar(() => wp2.document.querySelector("#estadoBusqueda").textContent.includes("Se encontraron"),
+   "la recarga corre la búsqueda inicial con las preferencias guardadas");
+ok(wp2.sessionStorage.getItem("serch_centro") === "kinder",
+   "la preferencia fija el centro inicial de la sesión (serch_centro=kinder)");
+ok(wp2.eval("centroActivo()") === "kinder", "el centro activo tras recargar es el Jardín de Niños");
+ok(wp2.document.querySelector('#selectorCentro .centro-btn[data-centro="kinder"]').classList.contains("activo"),
+   "el interruptor de centro refleja lo guardado");
+ok(wp2.document.querySelector('.chip-radio[data-radio="10"]').classList.contains("activo"),
+   "el chip de radio refleja los 10 km guardados");
+ok(wp2.document.querySelector('.nivel-btn[data-nivel="Primaria"]').classList.contains("activo"),
+   "el filtro de nivel refleja «Primaria»");
+ok(wp2.document.querySelector('.tipo-btn[data-tipo="gratuita"]').classList.contains("activo"),
+   "el filtro de tipo refleja «Gratuitas»");
+ok(wp2.document.querySelector('.orden-btn[data-orden="fama"]').classList.contains("activo"),
+   "el orden refleja «Mejor fama»");
+const g2 = JSON.parse(wp2.sessionStorage.getItem("serch_resultados"));
+ok(g2.radioKm === 10 && g2.centro === "kinder",
+   "la búsqueda inicial se hizo y se guardó con el radio y el centro de las preferencias");
+const visiblesPrefs = [...wp2.document.querySelectorAll("#lista .tarjeta-est")];
+ok(visiblesPrefs.length === 1 && visiblesPrefs[0].textContent.includes("Benito Juárez"),
+   "con Primaria + Gratuitas aplicadas solo se ve la primaria gratuita del radio (Benito Juárez)");
+
+/* Restablecer: borra la clave y aplica los valores por defecto en el acto. */
+wp2.document.querySelector("#btnRestablecerPrefs").click();
+ok(wp2.localStorage.getItem("serch_preferencias") === null,
+   "restablecer borra la clave serch_preferencias");
+await esperar(() => {
+  const e = wp2.document.querySelector("#estadoBusqueda").textContent;
+  return e.includes("Se encontraron") && e.includes("5 km") && e.includes("Instituto Juventud");
+}, "restablecer vuelve a buscar con los valores por defecto (IJEM, 5 km)");
+ok(wp2.document.querySelector('#selectorCentro .centro-btn[data-centro="ijem"]').classList.contains("activo"),
+   "tras restablecer, el interruptor marca «Instituto Juventud»");
+ok(wp2.document.querySelector('.chip-radio[data-radio="5"]').classList.contains("activo"),
+   "tras restablecer, el radio vuelve a 5 km");
+ok(wp2.document.querySelector('.nivel-btn[data-nivel="Todas"]').classList.contains("activo") &&
+   wp2.document.querySelector('.tipo-btn[data-tipo="todas"]').classList.contains("activo") &&
+   wp2.document.querySelector('.orden-btn[data-orden="cerca"]').classList.contains("activo"),
+   "tras restablecer, nivel, tipo y orden vuelven a los valores por defecto");
+ok(wp2.document.querySelectorAll("#lista .tarjeta-est").length === 6,
+   "tras restablecer se ven las 6 escuelas del radio por defecto");
+
 console.log("\nResultado: " + pasadas + " pasadas, " + falladas + " falladas");
 servidor.close();
 process.exit(falladas ? 1 : 0);
