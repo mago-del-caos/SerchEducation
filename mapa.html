@@ -19,7 +19,7 @@
     <div>
       <h1><span class="serch">Serch</span> <span class="edu">Education</span></h1>
       <p class="saludo">Hola · <span class="fecha-hoy"></span></p>
-      <p>El mapa de escuelas: el círculo marca el radio de búsqueda y el punto azul, el centro elegido.</p>
+      <p>El mapa de escuelas: el círculo marca el radio de búsqueda y el logo «Soy Juventud» marca el centro elegido.</p>
     </div>
   </a>
   <button class="btn-menu" id="btnMenu" aria-label="Abrir el menú de navegación" aria-haspopup="true" aria-expanded="false" aria-controls="menuNav">☰</button>
@@ -38,10 +38,10 @@
     <div class="fila">
       <span class="etiqueta"><img src="assets/icono-radar.png" alt="" style="width:20px;height:20px;border-radius:50%;vertical-align:-5px;"> Centro:</span>
       <div class="centros" id="selectorCentro" role="group" aria-label="Centro de búsqueda"></div>
-      <span id="mapaMsg" style="font-size:.88rem; color:var(--texto2);">El mapa está centrado en el centro elegido. Cambia el centro o el radio para volver a consultar OpenStreetMap.</span>
+      <span id="mapaMsg" style="font-size:.88rem; color:var(--texto2);">El mapa está centrado en el centro elegido. Cambia el centro o el radio para volver a filtrar el registro de escuelas.</span>
     </div>
     <div class="fila">
-      <span class="etiqueta">Radio del círculo (al cambiarlo se vuelve a consultar OpenStreetMap):</span>
+      <span class="etiqueta">Radio del círculo (al cambiarlo se vuelve a filtrar el registro):</span>
       <span id="chipsRadioMapa"></span>
     </div>
   </section>
@@ -51,8 +51,8 @@
 </main>
 
 <footer>
-  <p><img src="assets/icono-busqueda.png" alt=""> <strong>Fuente de datos:</strong> © OpenStreetMap y colaboradores (licencia ODbL), consultado en vivo con Overpass API.</p>
-  <p>Mapa © OpenStreetMap y colaboradores. Si el mapa no carga, abre la ruta a cada escuela con el botón «Cómo llegar» de su ficha.</p>
+  <p><img src="assets/icono-busqueda.png" alt=""> <strong>Fuente de datos:</strong> © OpenStreetMap y colaboradores (licencia ODbL); registro propio incluido en la app y actualizado cada semana.</p>
+  <p>Mapa © OpenStreetMap · © CARTO. Si el mapa no carga, abre la ruta a cada escuela con el botón «Cómo llegar» de su ficha.</p>
 </footer>
 <script src="app.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -93,14 +93,15 @@ function pintarChips() {
   chips.querySelectorAll(".chip-radio").forEach(b => b.addEventListener("click", async () => {
     radioActual = parseInt(b.dataset.radio, 10);
     pintarChips();
-    $("#mapaMsg").textContent = "Consultando escuelas en " + radioActual + " km…";
+    $("#mapaMsg").textContent = "Filtrando el registro en " + radioActual + " km…";
     try {
       await buscarEscuelas(radioActual);
       $("#mapaMsg").textContent = "Se encontraron " + resultados.length + " escuelas en " + radioActual + " km.";
     } catch (e) {
-      $("#mapaMsg").textContent = "La consulta en vivo falló; se mantiene el círculo y las escuelas ya cargadas.";
+      $("#mapaMsg").textContent = "No se pudo cargar el registro de escuelas; se mantienen el círculo, el centro y las escuelas ya cargadas.";
     }
     dibujarCirculo(true);
+    marcarCentro(false);
     dibujarEscuelas();
   }));
 }
@@ -121,20 +122,22 @@ function mostrarRespaldo(motivo) {
     "</section>";
 }
 
-/* Marca del centro elegido: punto azul con anillo pulsante, por
-   encima de los demás marcadores. Su popup dice la etiqueta del
-   centro activo (la ubicación es fija: uno de los dos centros). */
+/* Marca del centro elegido: el logo «Soy Juventud», grande e
+   inconfundible, por encima de todos los demás marcadores. Se
+   dibuja SIEMPRE, haya o no escuelas en los resultados: el
+   punto que manda es el centro. Su popup nombra el centro
+   activo (la ubicación es fija: uno de los dos centros). */
 function marcarCentro(centrar) {
   if (!mapa) return;
   if (marcadorCentro) marcadorCentro.remove();
   marcadorCentro = L.marker([origen.lat, origen.lng], {
-    zIndexOffset: 1000,
-    icon: L.divIcon({
-      className: "",
-      html: '<div class="punto-usuario"><span class="punto-usuario-anillo"></span><span class="punto-usuario-centro"></span></div>',
-      iconSize: [22, 22], iconAnchor: [11, 11]
+    zIndexOffset: 10000,
+    icon: L.icon({
+      iconUrl: "assets/marcador-centro.png",
+      iconSize: [44, 44], iconAnchor: [22, 22], popupAnchor: [0, -22],
+      className: "marcador-centro-img"
     })
-  }).addTo(mapa).bindPopup(esc(origen.etiqueta));
+  }).addTo(mapa).bindPopup("<strong>" + esc(origen.etiqueta) + "</strong> — centro de búsqueda");
   if (centrar) mapa.setView([origen.lat, origen.lng], 14);
 }
 
@@ -177,12 +180,12 @@ function dibujarEscuelas() {
    el mismo radio; las distancias se recalculan desde él. */
 montarSelectorCentro("#selectorCentro", async () => {
   const msg = $("#mapaMsg");
-  msg.textContent = "Consultando escuelas en " + radioActual + " km desde " + origen.etiqueta + "…";
+  msg.textContent = "Filtrando el registro en " + radioActual + " km desde " + origen.etiqueta + "…";
   try {
     await buscarEscuelas(radioActual);
     msg.textContent = "Se encontraron " + resultados.length + " escuelas en " + radioActual + " km alrededor de " + origen.etiqueta + ".";
   } catch (e) {
-    msg.textContent = "La consulta en vivo falló; se mantiene el círculo y las escuelas ya cargadas.";
+    msg.textContent = "No se pudo cargar el registro de escuelas; se mantienen el círculo, el centro y las escuelas ya cargadas.";
   }
   dibujarCirculo(true);
   marcarCentro(false);
@@ -196,17 +199,18 @@ montarSelectorCentro("#selectorCentro", async () => {
     return;
   }
   mapa = L.map("mapa").setView([origen.lat, origen.lng], 13);
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: "© OpenStreetMap y colaboradores"
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+    subdomains: "abcd",
+    maxZoom: 20,
+    attribution: "© OpenStreetMap · © CARTO"
   }).addTo(mapa);
   if (!resultados.length) {
-    $("#mapaMsg").textContent = "Consultando escuelas en " + radioActual + " km…";
+    $("#mapaMsg").textContent = "Filtrando el registro en " + radioActual + " km…";
     try {
       await buscarEscuelas(radioActual);
       $("#mapaMsg").textContent = "Se encontraron " + resultados.length + " escuelas en " + radioActual + " km alrededor de " + origen.etiqueta + ".";
     } catch (e) {
-      $("#mapaMsg").textContent = "La consulta en vivo falló. Toca un radio para reintentar o busca primero en el Inicio.";
+      $("#mapaMsg").textContent = "No se pudo cargar el registro de escuelas. Toca un radio para reintentar o busca primero en el Inicio.";
     }
   } else {
     $("#mapaMsg").textContent = resultados.length + " escuelas cargadas en " + radioActual + " km alrededor de " + origen.etiqueta + ".";

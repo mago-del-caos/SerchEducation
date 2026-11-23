@@ -2,11 +2,15 @@
 /* ============================================================
    Serch Education — Service Worker (PWA)
    Guarda en caché las páginas y los recursos propios para que
-   la app se pueda instalar y abra rápido. Los servicios externos
-   (Overpass API y los mosaicos del mapa de OpenStreetMap) NO se
-   cachean: las escuelas se consultan siempre en vivo.
+   la app se pueda instalar y abra rápido — incluido el registro
+   de escuelas (escuelas.json), la fuente primaria de datos.
+   Los servicios externos (Overpass API, solo del botón opcional
+   «Actualizar en vivo», y los mosaicos del mapa de CARTO) NO se
+   cachean aquí.
+   serch-v5: ruptura limpia de las cachés mezcladas que dejaron
+   las subidas rápidas de versiones anteriores.
    ============================================================ */
-const CACHE = "serch-v4";
+const CACHE = "serch-v5";
 const PROPIOS = [
   "./",
   "index.html",
@@ -19,6 +23,8 @@ const PROPIOS = [
   "manifest.json",
   "eventos.json",
   "datos-extra.json",
+  "escuelas.json",
+  "assets/marcador-centro.png",
   "assets/icono-busqueda.png",
   "assets/icono-kinder.png",
   "assets/icono-primaria.png",
@@ -57,8 +63,9 @@ self.addEventListener("fetch", ev => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // externos: directo a la red
   // Los archivos de datos del repo van primero a la red (que no se
-  // quede una investigación vieja); el resto, caché primero.
-  const esDato = url.pathname.endsWith("datos-extra.json") || url.pathname.endsWith("eventos.json");
+  // quede un registro ni una investigación viejos); el resto, caché primero.
+  const esDato = url.pathname.endsWith("datos-extra.json") || url.pathname.endsWith("eventos.json") ||
+    url.pathname.endsWith("escuelas.json");
   if (esDato) {
     ev.respondWith(
       fetch(req).then(res => {

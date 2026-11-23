@@ -31,12 +31,13 @@
   </nav>
 </header>
 <main>
-  <div class="aviso-datos">Los datos se consultan <strong>en vivo</strong> en OpenStreetMap. El nivel y el tipo (gratuita o de pago) se infieren de las etiquetas públicas del mapa; los costos casi nunca se publican: si no hay dato, la ficha dice «sin dato público» y hay que consultarlo con la escuela.</div>
+  <div class="aviso-datos">La app trae un <strong>registro propio de escuelas</strong> (datos de OpenStreetMap) que se actualiza <strong>cada semana</strong>: la búsqueda filtra ese registro en tu teléfono y no depende de consultar el mapa en el momento. El nivel y el tipo (gratuita o de pago) se infieren de las etiquetas públicas del mapa; los costos casi nunca se publican: si no hay dato, la ficha dice «sin dato público» y hay que consultarlo con la escuela. Si quieres datos al minuto, el botón «Actualizar en vivo» intenta refrescar desde OpenStreetMap.</div>
 
   <section class="panel" aria-label="Controles de búsqueda">
     <div class="fila">
       <span class="etiqueta"><img src="assets/icono-radar.png" alt="" style="width:20px;height:20px;border-radius:50%;vertical-align:-5px;"> Centro de búsqueda:</span>
       <div class="centros" id="selectorCentro" role="group" aria-label="Centro de búsqueda"></div>
+      <p class="centro-activo" id="centroActivoTxt" role="status"></p>
     </div>
     <div class="fila">
       <span class="etiqueta"><img src="assets/icono-distancia.png" alt="" style="width:20px;height:20px;border-radius:50%;vertical-align:-5px;"> Radio de búsqueda:</span>
@@ -66,6 +67,7 @@
     </div>
     <div class="fila">
       <button id="btnBuscar" class="destacado"><img src="assets/icono-busqueda.png" alt=""> Buscar escuelas</button>
+      <button type="button" id="btnActualizarVivo">🔄 Actualizar en vivo</button>
       <button type="button" id="btnGuardarPrefs">💾 Guardar preferencias</button>
       <button type="button" id="btnRestablecerPrefs">Restablecer</button>
       <button type="button" class="btn-instalar">📲 Descargar la app</button>
@@ -85,13 +87,27 @@
 </main>
 
 <footer>
-  <p><img src="assets/icono-busqueda.png" alt=""> <strong>Fuente de datos:</strong> © OpenStreetMap y colaboradores (licencia ODbL), consultado en vivo con Overpass API. El nivel y el tipo de cada escuela se infieren de sus etiquetas públicas; lo que no trae etiqueta se muestra como «sin dato público».</p>
+  <p><img src="assets/icono-busqueda.png" alt=""> <strong>Fuente de datos:</strong> © OpenStreetMap y colaboradores (licencia ODbL); registro propio incluido en la app y actualizado cada semana. El nivel y el tipo de cada escuela se infieren de sus etiquetas públicas; lo que no trae etiqueta se muestra como «sin dato público».</p>
   <p>Serch Education no inventa costos, beneficios ni servicios: si una escuela no los publica en OpenStreetMap, consúltalos directamente con ella.</p>
 </footer>
 <script src="app.js"></script>
 <script>
 "use strict";
 /* ---------- Inicio: buscador de escuelas ---------- */
+/* El interruptor de centros se monta ANTES que cualquier carga
+   de datos: es HTML+JS local y NO depende de que la búsqueda
+   tenga éxito. Pase lo que pase con los datos, los dos botones
+   del centro deben verse. (Abajo, tras aplicar las preferencias,
+   se vuelve a montar para que refleje el centro aplicado.) */
+function pintarCentroActivo() {
+  const el = $("#centroActivoTxt");
+  if (el) el.innerHTML = "Centro activo: <strong>" + esc(origen.etiqueta) + "</strong> · " +
+    esc(origen.direccion || "") + " — desde este punto se miden todas las distancias.";
+}
+function alCambiarCentro() { pintarCentroActivo(); buscar(); }
+montarSelectorCentro("#selectorCentro", alCambiarCentro);
+pintarCentroActivo();
+
 let radioKm = 5;
 let nivelFiltro = "Todas";
 let tipoFiltro = "todas";
@@ -125,6 +141,11 @@ function guardarFiltros() {
   try { sessionStorage.setItem("serch_filtros", JSON.stringify({ radioKm, nivel: nivelFiltro, tipo: tipoFiltro, orden })); } catch (e) { /* sin sessionStorage */ }
 }
 if (prefsGuardadas) guardarFiltros(); // la sesión queda coherente con lo aplicado
+/* Las preferencias pudieron cambiar el centro tras el primer
+   montaje del interruptor: se vuelve a montar para que el botón
+   activo y la línea del centro activo reflejen lo aplicado. */
+montarSelectorCentro("#selectorCentro", alCambiarCentro);
+pintarCentroActivo();
 
 /* Chips de radio: 1, 3, 5, 10, 20 y 50 km. */
 const chipsRadio = $("#chipsRadio");
@@ -183,19 +204,16 @@ function pintarControles() {
 function estado(html) { $("#estadoBusqueda").innerHTML = html; }
 
 async function buscar() {
-  estado("Consultando escuelas en <strong>" + radioKm + " km</strong> alrededor de " + esc(origen.etiqueta) + "… (datos en vivo de OpenStreetMap)");
+  estado("Cargando el registro de escuelas y filtrando en <strong>" + radioKm + " km</strong> alrededor de " + esc(origen.etiqueta) + "…");
   $("#btnBuscar").disabled = true;
   try {
     await buscarEscuelas(radioKm);
-    estado("Se encontraron <strong>" + resultados.length + " escuelas</strong> en " + radioKm + " km alrededor de " + esc(origen.etiqueta) + ".");
+    const info = infoDataset();
+    estado("Se encontraron <strong>" + resultados.length + " escuelas</strong> en " + radioKm + " km alrededor de " + esc(origen.etiqueta) + "." +
+      (info ? "<br>Datos del " + esc(info.generado) + " · " + info.total + " escuelas en el registro · se actualiza cada semana" + (info.parcial ? " · <strong>registro parcial</strong>" : "") + "." : ""));
   } catch (e) {
-    const guardado = cargarResultadosGuardados();
-    if (guardado && guardado.escuelas.length) {
-      estado('<span class="error">La consulta en vivo falló (Overpass no respondió).</span> Te muestro la última búsqueda guardada en esta sesión: <strong>' + guardado.escuelas.length + " escuelas</strong> en " + guardado.radioKm + " km.");
-    } else {
-      estado('<span class="error">La consulta a OpenStreetMap falló (Overpass no respondió tras reintentarlo).</span> Revisa tu conexión y toca «Buscar escuelas» para intentarlo de nuevo.');
-      resultados = [];
-    }
+    estado('<span class="error">No se pudo cargar el registro de escuelas de la app (escuelas.json).</span> Revisa tu conexión y toca «Buscar escuelas» para intentarlo de nuevo.');
+    resultados = [];
   } finally {
     $("#btnBuscar").disabled = false;
   }
@@ -260,6 +278,26 @@ function render() {
 
 $("#btnBuscar").addEventListener("click", buscar);
 
+/* «Actualizar en vivo» (opcional): intenta refrescar desde
+   OpenStreetMap con la cadena de respaldos de intérpretes. Si
+   responde, sustituye los datos de la sesión; si no, se queda
+   el registro semanal y el mensaje lo dice sin dramatismo. Al
+   cambiar de centro o de radio se vuelve al registro. */
+$("#btnActualizarVivo").addEventListener("click", async () => {
+  const btn = $("#btnActualizarVivo");
+  btn.disabled = true;
+  estado("Consultando OpenStreetMap en vivo… (puede tardar unos segundos)");
+  try {
+    await actualizarEnVivo(radioKm);
+    estado("Datos <strong>actualizados en vivo</strong> desde OpenStreetMap: <strong>" + resultados.length + " escuelas</strong> en " + radioKm + " km alrededor de " + esc(origen.etiqueta) + ". Si cambias de centro o de radio, se vuelve al registro semanal.");
+  } catch (e) {
+    estado('<span class="error">La actualización en vivo no respondió.</span> Se quedan los datos del registro semanal, sin cambios.');
+  } finally {
+    btn.disabled = false;
+  }
+  render();
+});
+
 /* ---------- Guardar / restablecer preferencias (localStorage) ----------
    Guardar deja fijos centro, radio, nivel, tipo y orden en
    localStorage («serch_preferencias») para que se apliquen solos
@@ -283,19 +321,20 @@ $("#btnRestablecerPrefs").addEventListener("click", () => {
   orden = PREFERENCIAS_DEFECTO.orden;
   if (centroActivo() !== PREFERENCIAS_DEFECTO.centro) {
     fijarCentro(PREFERENCIAS_DEFECTO.centro);
-    montarSelectorCentro("#selectorCentro", () => buscar());
+    montarSelectorCentro("#selectorCentro", alCambiarCentro);
   }
   pintarControles();
+  pintarCentroActivo();
   guardarFiltros();
   buscar();
 });
-/* Selector de centro fijo: al intercambiar entre el Instituto
-   Juventud y el Jardín de Niños IJEM se vuelve a buscar con el
-   mismo radio y las distancias se recalculan desde el centro
-   elegido. Ya no hay origen libre por GPS. */
-montarSelectorCentro("#selectorCentro", () => buscar());
+/* El selector de centro fijo ya se montó arriba del todo (antes
+   de cualquier carga de datos): al intercambiar entre el
+   Instituto Juventud y el Jardín de Niños IJEM se vuelve a
+   buscar con el mismo radio y las distancias se recalculan
+   desde el centro elegido. Ya no hay origen libre por GPS. */
 
-/* ---------- Arranque: búsqueda en vivo con el radio elegido ---------- */
+/* ---------- Arranque: filtrado del registro con el radio elegido ---------- */
 buscar();
 </script>
 </body>

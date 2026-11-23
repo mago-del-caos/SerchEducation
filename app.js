@@ -1,9 +1,14 @@
 "use strict";
 /* ============================================================
    Serch Education — lógica compartida por todas las páginas
-   Los datos de escuelas vienen EN VIVO de OpenStreetMap
-   (Overpass API): no hay base de datos propia en esta versión.
-   Nada se inventa: lo que OSM no trae se muestra como
+   Fuente PRIMARIA: el registro propio de la app, escuelas.json
+   (generado desde OpenStreetMap por tools/generar-datos.py y
+   refrescado cada semana). La app filtra ese registro en el
+   cliente; NO depende de la consulta en vivo, que es el punto
+   único de falla histórico (Overpass devuelve 406 de forma
+   intermitente). La consulta en vivo queda solo como botón
+   opcional «Actualizar en vivo».
+   Nada se inventa: lo que el registro no trae se muestra como
    «sin dato público».
    ============================================================ */
 
@@ -27,8 +32,8 @@
    siempre es una copia del centro activo.
    ============================================================ */
 const CENTROS = {
-  ijem: { lat: 19.4785, lng: -99.2396, etiqueta: "Instituto Juventud del Estado de México" },
-  kinder: { lat: 19.49411, lng: -99.22223, etiqueta: "Jardín de Niños IJEM" }
+  ijem: { lat: 19.4785, lng: -99.2396, etiqueta: "Instituto Juventud del Estado de México", direccion: "Calzada San Agustín 61, Rincón Echegaray, Naucalpan de Juárez" },
+  kinder: { lat: 19.49411, lng: -99.22223, etiqueta: "Jardín de Niños IJEM", direccion: "Av. del Paseo 19, Colón de Echegaray, Naucalpan de Juárez" }
 };
 const CENTRO_DEFECTO = CENTROS.ijem;   // el centro inicial es el IJEM
 const RADIOS_KM = [1, 3, 5, 10, 20, 50];
@@ -354,12 +359,81 @@ function iconoDeNivel(nivel) {
   }[nivel] || "assets/icono-busqueda.png";
 }
 
-/* ---------- Búsqueda en vivo (con respaldos automáticos) ---------- */
+/* ============================================================
+   Registro propio (escuelas.json): la FUENTE PRIMARIA de datos.
+   Lo genera tools/generar-datos.py desde OpenStreetMap y se
+   refresca cada semana; viaja con la app y entra en la caché
+   del service worker, así que la app funciona sin depender de
+   que Overpass responda en el momento de la visita.
+   ============================================================ */
+const TIPO_TEXTO = {
+  gratuita: "Pública (gratuita)",
+  pago: "Particular (de pago)",
+  sindato: "Tipo sin dato público"
+};
+let baseEscuelas = null;     // registro completo ya normalizado (dist: null)
+let datasetInfo = null;      // {generado, total, parcial}
+let promesaDataset = null;   // carga en curso (se comparte entre páginas)
+let fuenteDatos = "dataset"; // "dataset" | "vivo": de dónde salieron los resultados
+
+/* Un registro de escuelas.json -> escuela normalizada de la app.
+   El dataset no trae horario/operador/costo de OSM: quedan null
+   y los servicios se reconstruyen con lo que sí trae. */
+function escuelaDesdeRegistro(reg) {
+  const servicios = [];
+  if (reg.website) servicios.push({ etiqueta: "Sitio web", valor: reg.website });
+  if (reg.telefono) servicios.push({ etiqueta: "Teléfono", valor: reg.telefono });
+  if (reg.direccion) servicios.push({ etiqueta: "Dirección", valor: reg.direccion });
+  return {
+    id: reg.id,
+    nombre: reg.nombre,
+    nivel: reg.nivel,
+    tipo: reg.tipo,
+    tipoTexto: reg.tipoTexto || TIPO_TEXTO[reg.tipo] || "Tipo sin dato público",
+    lat: reg.lat, lng: reg.lng,
+    dist: null, // se calcula contra el centro activo al buscar
+    direccion: reg.direccion || null,
+    website: reg.website || null,
+    telefono: reg.telefono || null,
+    horario: null,
+    operador: null,
+    costo: null,
+    servicios
+  };
+}
+async function cargarDataset() {
+  if (baseEscuelas) return baseEscuelas;
+  if (!promesaDataset) {
+    promesaDataset = (async () => {
+      const r = await fetch("escuelas.json");
+      if (!r.ok) throw new Error("escuelas.json respondió " + r.status);
+      const j = await r.json();
+      if (!j || !Array.isArray(j.escuelas)) throw new Error("escuelas.json no trae la lista de escuelas");
+      datasetInfo = {
+        generado: j.generado || "sin fecha",
+        total: typeof j.total === "number" ? j.total : j.escuelas.length,
+        parcial: !!j.parcial
+      };
+      const extra = await cargarDatosExtra();
+      baseEscuelas = j.escuelas
+        .filter(reg => reg && typeof reg.lat === "number" && typeof reg.lng === "number")
+        .map(reg => aplicarDatosExtra(escuelaDesdeRegistro(reg), extra));
+      return baseEscuelas;
+    })();
+    // Si la carga falla, no se memoriza el fracaso: el siguiente intento reintenta.
+    promesaDataset.catch(() => { promesaDataset = null; });
+  }
+  return promesaDataset;
+}
+function infoDataset() { return datasetInfo; }
+function fuenteActual() { return fuenteDatos; }
+
+/* ---------- Resultados de la búsqueda (sesión) ---------- */
 let resultados = [];
 function guardarResultados(radioKm) {
   try {
     sessionStorage.setItem("serch_resultados", JSON.stringify({
-      radioKm, centro: claveCentro,
+      radioKm, centro: claveCentro, fuente: fuenteDatos,
       origen: { lat: origen.lat, lng: origen.lng, etiqueta: origen.etiqueta },
       ts: Date.now(), escuelas: resultados
     }));
@@ -406,7 +480,24 @@ async function consultarOverpass(consulta) {
   }
   throw ultimoError || new Error("Ningún intérprete Overpass respondió");
 }
+/* Búsqueda PRIMARIA: filtra el registro propio en el cliente
+   (centro activo + radio). Sin ninguna llamada a Overpass. */
 async function buscarEscuelas(radioKm) {
+  const base = await cargarDataset();
+  fuenteDatos = "dataset";
+  resultados = base
+    .map(e => ({ ...e, dist: distanciaKm(origen.lat, origen.lng, e.lat, e.lng) }))
+    .filter(e => e.dist <= radioKm)
+    .sort((a, b) => a.dist - b.dist);
+  guardarResultados(radioKm);
+  return resultados;
+}
+
+/* Actualización EN VIVO (opcional, botón secundario): consulta
+   Overpass con la cadena de respaldos alrededor del centro
+   activo y, SOLO si responde, sustituye los datos de la sesión.
+   Si falla, lanza y la app se queda con el registro semanal. */
+async function actualizarEnVivo(radioKm) {
   const data = await consultarOverpass(construirConsultaOverpass(origen.lat, origen.lng, radioKm));
   const vistas = new Set();
   const lista = [];
@@ -420,6 +511,7 @@ async function buscarEscuelas(radioKm) {
   const extra = await cargarDatosExtra();
   lista.forEach(e => aplicarDatosExtra(e, extra));
   resultados = filtrarPorRadio(lista, radioKm).sort((a, b) => a.dist - b.dist);
+  fuenteDatos = "vivo";
   guardarResultados(radioKm);
   return resultados;
 }
@@ -569,7 +661,8 @@ function botRespuesta(textoCrudo) {
 
   if (!lista.length) {
     return "Todavía no tengo escuelas cargadas en esta sesión. Ve al <strong>Inicio</strong>, elige un radio " +
-      "(1 a 50 km) y toca <strong>«Buscar escuelas»</strong>: consulto OpenStreetMap en vivo y luego sí puedo responderte.";
+      "(1 a 50 km) y toca <strong>«Buscar escuelas»</strong>: se carga el registro de escuelas de la app " +
+      "(datos de OpenStreetMap, actualizados cada semana) y luego sí puedo responderte.";
   }
   const guardado = (() => { try { return JSON.parse(sessionStorage.getItem("serch_resultados") || "null"); } catch (e) { return null; } })();
   const radioTxt = guardado && guardado.radioKm ? " en " + guardado.radioKm + " km" : "";
@@ -710,7 +803,7 @@ function botRespuesta(textoCrudo) {
   if (/^\s*(hola|buenas|hey|que tal|buenos dias|buenas tardes|buenas noches)\b/.test(t.trim()) ||
       /(ayuda|que puedes|para que sirves|que sabes hacer)/.test(t)) {
     return "¡Hola! Soy el asistente de <strong>Serch Education</strong> y respondo con los resultados " +
-      "cargados de OpenStreetMap. Pregúntame <strong>qué primarias hay cerca</strong>, <strong>cuáles son " +
+      "cargados del registro de escuelas (datos de OpenStreetMap). Pregúntame <strong>qué primarias hay cerca</strong>, <strong>cuáles son " +
       "gratuitas</strong>, <strong>cuál es la más cercana</strong>, <strong>cuántas escuelas hay</strong> " +
       "o <strong>qué servicios tiene</strong> una escuela por su nombre.";
   }
@@ -760,7 +853,8 @@ function chatCrear() {
     if (abierto && !chatSaludoMostrado) {
       chatSaludoMostrado = true;
       chatAgregarMsg("bot", "¡Hola! Soy el asistente de <strong>Serch Education</strong>. Respondo solo con " +
-        "los resultados cargados de OpenStreetMap: niveles, gratuitas, cercanía y servicios publicados. " +
+        "los resultados cargados del registro de escuelas (datos de OpenStreetMap, actualizados cada semana): " +
+        "niveles, gratuitas, cercanía y servicios publicados. " +
         "Toca una sugerencia o escribe tu pregunta.");
     }
     if (abierto) { const inp = document.getElementById("chatInput"); if (inp) inp.focus(); }
@@ -802,6 +896,7 @@ if (typeof module !== "undefined" && module.exports) {
     filtrarPorRadio, distanciaKm, normalizar, RADIOS_KM, aplicarDatosExtra, CENTRO_DEFECTO,
     CENTROS, fijarCentro, centroActivo, montarSelectorCentro,
     pintarEstrellas, URLS_OVERPASS, endpointsOverpass,
-    CLAVE_PREFERENCIAS, PREFERENCIAS_DEFECTO, cargarPreferencias, guardarPreferencias, borrarPreferencias
+    CLAVE_PREFERENCIAS, PREFERENCIAS_DEFECTO, cargarPreferencias, guardarPreferencias, borrarPreferencias,
+    cargarDataset, escuelaDesdeRegistro, infoDataset, fuenteActual
   };
 }

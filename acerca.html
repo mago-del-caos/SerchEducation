@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cómo funciona — Serch Education</title>
-<meta name="description" content="Cómo funciona Serch Education: datos en vivo de OpenStreetMap, datos investigados, la vigilancia semanal y los límites honestos de la información.">
+<meta name="description" content="Cómo funciona Serch Education: registro propio de escuelas desde OpenStreetMap actualizado cada semana, datos investigados, la vigilancia semanal y los límites honestos de la información.">
 <link rel="icon" type="image/png" href="assets/icono-busqueda.png">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <link rel="manifest" href="manifest.json">
@@ -36,8 +36,8 @@
     <div class="pasos">
       <div class="paso">
         <img src="assets/icono-radar.png" alt="">
-        <div><strong>1. Búsqueda en vivo, sin base de datos vieja</strong>
-        <span>Cada búsqueda consulta en el momento <strong>OpenStreetMap</strong> (vía Overpass API) alrededor del centro que elijas — la ubicación es fija y solo hay dos: el <strong>Instituto Juventud del Estado de México</strong> o el <strong>Jardín de Niños IJEM</strong>, ambos en Naucalpan de Juárez; no se usa tu GPS — dentro del radio que elijas: 1, 3, 5, 10, 20 o 50 km. El <a href="mapa.html">mapa</a> dibuja ese círculo y la marca del centro elegido.</span></div>
+        <div><strong>1. Un registro propio, actualizado cada semana</strong>
+        <span>La app trae incluido un <strong>registro de escuelas</strong> generado desde <strong>OpenStreetMap</strong>: la búsqueda lo filtra en tu teléfono, sin depender de que un servidor externo responda en el momento (la consulta en vivo resultó ser el punto débil: el servidor público de mapas a veces rechaza las peticiones). La ubicación es fija y solo hay dos centros: el <strong>Instituto Juventud del Estado de México</strong> o el <strong>Jardín de Niños IJEM</strong>, ambos en Naucalpan de Juárez; no se usa tu GPS. El radio que elijas — 1, 3, 5, 10, 20 o 50 km — filtra el registro desde el centro activo, y el <a href="mapa.html">mapa</a> dibuja ese círculo y marca el centro con el logo «Soy Juventud». Si quieres datos al minuto, el botón <strong>«Actualizar en vivo»</strong> del Inicio intenta refrescar desde OpenStreetMap; si el servidor no responde, te quedas con el registro semanal, sin perder nada.</span></div>
       </div>
       <div class="paso">
         <img src="assets/icono-preparatoria.png" alt="">
@@ -61,8 +61,8 @@
       </div>
       <div class="paso">
         <img src="assets/icono-eventos.png" alt="">
-        <div><strong>6. Vigilancia semanal</strong>
-        <span>Una vez a la semana se toma una «foto» de las escuelas en 10 km alrededor del IJEM y se compara con la anterior: altas, bajas y cambios de nombre, tipo, sitio web o teléfono quedan anotados en la página de <a href="eventos.html">Eventos y cambios</a>.</span></div>
+        <div><strong>6. Vigilancia y refresco semanal</strong>
+        <span>Una vez a la semana se regenera el registro de escuelas desde OpenStreetMap (50 km alrededor de los dos centros) y se toma una «foto» de las escuelas en 10 km alrededor del IJEM que se compara con la anterior: altas, bajas y cambios de nombre, tipo, sitio web o teléfono quedan anotados en la página de <a href="eventos.html">Eventos y cambios</a>.</span></div>
       </div>
     </div>
   </section>
@@ -73,7 +73,7 @@
       <div class="paso">
         <img src="assets/icono-beneficios.png" alt="">
         <div><strong>Fuentes</strong>
-        <span>© OpenStreetMap y colaboradores (licencia ODbL), consultado en vivo con Overpass API; mapa © OpenStreetMap. Los datos investigados traen su propia fuente y fecha en cada ficha.</span></div>
+        <span>© OpenStreetMap y colaboradores (licencia ODbL): el registro de la app se genera desde ahí y se actualiza cada semana; mapa © OpenStreetMap · © CARTO. Los datos investigados traen su propia fuente y fecha en cada ficha.</span></div>
       </div>
       <div class="paso">
         <img src="assets/icono-busqueda.png" alt="">
@@ -90,7 +90,7 @@
 </main>
 
 <footer>
-  <p><img src="assets/icono-busqueda.png" alt=""> <strong>Fuente de datos:</strong> © OpenStreetMap y colaboradores (licencia ODbL), consultado en vivo con Overpass API. El nivel y el tipo de cada escuela se infieren de sus etiquetas públicas; lo que no trae etiqueta se muestra como «sin dato público».</p>
+  <p><img src="assets/icono-busqueda.png" alt=""> <strong>Fuente de datos:</strong> © OpenStreetMap y colaboradores (licencia ODbL); registro propio incluido en la app y actualizado cada semana. El nivel y el tipo de cada escuela se infieren de sus etiquetas públicas; lo que no trae etiqueta se muestra como «sin dato público».</p>
   <p>Serch Education no inventa costos, beneficios ni servicios: si una escuela no los publica en OpenStreetMap ni están investigados, consúltalos directamente con ella.</p>
 </footer>
 <script src="app.js"></script>
