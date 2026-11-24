@@ -1,6 +1,6 @@
 "use strict";
 /* ============================================================
-   Serch Education — lógica compartida por todas las páginas
+   Búsqueda educativa — lógica compartida por todas las páginas
    Fuente PRIMARIA: el registro propio de la app, escuelas.json
    (generado desde OpenStreetMap por tools/generar-datos.py y
    refrescado cada semana). La app filtra ese registro en el
@@ -687,8 +687,8 @@ function mostrarHojaInstalar(titulo, html) {
 }
 function accionInstalar() {
   if (appYaInstalada()) {
-    mostrarHojaInstalar("Serch Education ya está instalada",
-      "Ya tienes Serch Education en tu pantalla de inicio. Ábrela desde ahí: funciona como app, sin navegador.");
+    mostrarHojaInstalar("Búsqueda educativa ya está instalada",
+      "Ya tienes Búsqueda educativa en tu pantalla de inicio. Ábrela desde ahí: funciona como app, sin navegador.");
     return;
   }
   if (avisoInstalacion) {
@@ -700,21 +700,21 @@ function accionInstalar() {
     return;
   }
   if (esIOS()) {
-    mostrarHojaInstalar("Instala Serch Education en tu iPhone",
+    mostrarHojaInstalar("Instala Búsqueda educativa en tu iPhone",
       "Safari no instala con un solo toque; hazlo así:<br>" +
       "1. Toca el botón <strong>Compartir</strong> (el cuadro con la flecha hacia arriba).<br>" +
       "2. Elige <strong>«Agregar a pantalla de inicio»</strong>.<br>" +
-      "3. Toca <strong>«Agregar»</strong> y Serch Education quedará como app en tu pantalla.");
+      "3. Toca <strong>«Agregar»</strong> y Búsqueda educativa quedará como app en tu pantalla.");
     return;
   }
   if (avisoConsumido) {
-    mostrarHojaInstalar("Serch Education ya está instalada",
-      "El aviso de instalación ya se usó en este dispositivo: busca Serch Education en tu pantalla de inicio o en tus aplicaciones.");
+    mostrarHojaInstalar("Búsqueda educativa ya está instalada",
+      "El aviso de instalación ya se usó en este dispositivo: busca Búsqueda educativa en tu pantalla de inicio o en tus aplicaciones.");
     return;
   }
-  mostrarHojaInstalar("Descarga Serch Education como app",
+  mostrarHojaInstalar("Descarga Búsqueda educativa como app",
     "Abre el menú del navegador (<strong>⋮</strong>) y elige <strong>«Instalar app»</strong> o " +
-    "<strong>«Agregar a pantalla de inicio»</strong>. Serch Education quedará instalada y abrirá sin navegador.");
+    "<strong>«Agregar a pantalla de inicio»</strong>. Búsqueda educativa quedará instalada y abrirá sin navegador.");
 }
 function initInstalar() {
   document.querySelectorAll(".btn-instalar").forEach(b =>
@@ -921,7 +921,7 @@ function botRespuesta(textoCrudo) {
   /* --- Saludo / ayuda --- */
   if (/^\s*(hola|buenas|hey|que tal|buenos dias|buenas tardes|buenas noches)\b/.test(t.trim()) ||
       /(ayuda|que puedes|para que sirves|que sabes hacer)/.test(t)) {
-    return "¡Hola! Soy el asistente de <strong>Serch Education</strong> y respondo con los resultados " +
+    return "¡Hola! Soy el asistente de <strong>Búsqueda educativa</strong> y respondo con los resultados " +
       "cargados del registro de escuelas (datos de OpenStreetMap). Pregúntame <strong>qué primarias hay cerca</strong>, <strong>cuáles son " +
       "gratuitas</strong>, <strong>cuál es la más cercana</strong>, <strong>cuántas escuelas hay</strong> " +
       "o <strong>qué servicios tiene</strong> una escuela por su nombre.";
@@ -947,7 +947,7 @@ function chatCrear() {
   burbuja.type = "button";
   burbuja.className = "chat-burbuja";
   burbuja.id = "chatBurbuja";
-  burbuja.setAttribute("aria-label", "Abrir el asistente de Serch Education");
+  burbuja.setAttribute("aria-label", "Abrir el asistente de Búsqueda educativa");
   burbuja.textContent = "💬";
   document.body.appendChild(burbuja);
   const panel = document.createElement("div");
@@ -955,7 +955,7 @@ function chatCrear() {
   panel.id = "chatPanel";
   panel.hidden = true;
   panel.innerHTML =
-    '<div class="chat-cabeza"><span>Asistente Serch Education</span>' +
+    '<div class="chat-cabeza"><span>Asistente Búsqueda educativa</span>' +
     '<button type="button" id="chatCerrar" aria-label="Cerrar el chat">✕</button></div>' +
     '<div class="chat-msjs" id="chatMsjs"></div>' +
     '<div class="chat-chips" id="chatChips">' +
@@ -971,7 +971,7 @@ function chatCrear() {
     burbuja.classList.toggle("abierto", abierto);
     if (abierto && !chatSaludoMostrado) {
       chatSaludoMostrado = true;
-      chatAgregarMsg("bot", "¡Hola! Soy el asistente de <strong>Serch Education</strong>. Respondo solo con " +
+      chatAgregarMsg("bot", "¡Hola! Soy el asistente de <strong>Búsqueda educativa</strong>. Respondo solo con " +
         "los resultados cargados del registro de escuelas (datos de OpenStreetMap, actualizados cada semana): " +
         "niveles, gratuitas, cercanía y servicios publicados. " +
         "Toca una sugerencia o escribe tu pregunta.");

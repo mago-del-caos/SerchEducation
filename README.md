@@ -1,4 +1,4 @@
-# Serch Education
+# Búsqueda educativa
 
 Buscador de escuelas — kinder, primaria, secundaria y preparatoria — desde los dos centros del IJEM: cuáles son gratuitas y cuáles de pago, qué costos, beneficios y servicios se conocen, su fama según valoraciones públicas, y sus eventos y promociones. La app trabaja con un **registro propio de escuelas** (`escuelas.json`, generado desde OpenStreetMap y refrescado cada semana) que filtra en el cliente: **no depende de la consulta en vivo**, que resultó ser el punto único de falla (Overpass devuelve «406 Not Acceptable» de forma intermitente según su carga). Los datos investigados viven en otro archivo del propio repo (`datos-extra.json`).
 
@@ -44,7 +44,7 @@ Cada campo se valida al leerlo (centro contra los dos centros fijos, radio contr
 
 **El dataset** — `escuelas.json` en la raíz: `{generado: "AAAA-MM-DD", total: N, escuelas: [...]}` con **todas** las escuelas (`amenity=school|kindergarten`, nodos y vías) dentro de **50 km del punto medio de los dos centros** (19.4863, -99.2309). Cada registro trae `{id («node/123»), nombre, nivel, nivelFuente, tipo, tipoTexto, tipoFuente, cct, lat, lng, website, telefono, direccion}` (los campos sin dato se omiten), normalizado con la **misma heurística** de nivel y tipo que usa la app. `nivelFuente` / `tipoFuente` dicen de dónde salió cada dato: `"sep"` (directorio oficial), `"osm"` (declarado en el mapa) o `"inferido"` (estimación por el nombre, etiquetada en la UI). Si una generación quedara incompleta, el propio JSON lo dice con `"parcial": true` y una nota — un dataset parcial nunca se presenta como completo.
 
-**Cómo se genera** — `tools/generar-datos.py` (Python, solo biblioteca estándar, User-Agent «SerchEducation/1.0»):
+**Cómo se genera** — `tools/generar-datos.py` (Python, solo biblioteca estándar, User-Agent «BusquedaEducativa/1.0»):
 
 ```bash
 python3 tools/generar-datos.py
