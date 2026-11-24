@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Serch Education — generador del registro propio de escuelas.
+"""Búsqueda educativa — generador del registro propio de escuelas.
 
 Descarga de OpenStreetMap (Overpass API) TODAS las escuelas
 (amenity=school y amenity=kindergarten, nodos y vías) dentro de
@@ -85,7 +85,7 @@ URLS_OVERPASS = [
     "https://overpass.kumi.systems/api/interpreter",
     "https://overpass.private.coffee/api/interpreter",
 ]
-USER_AGENT = "SerchEducation/1.0 (generador del registro de escuelas; datos OSM)"
+USER_AGENT = "BusquedaEducativa/1.0 (generador del registro de escuelas; datos OSM)"
 SALIDA_DEFECTO = Path(__file__).resolve().parent.parent / "escuelas.json"
 
 
@@ -514,7 +514,7 @@ def descargar_sep():
     for ent, ruta in zip(SEP_ENTIDADES, rutas):
         try:
             req = urllib.request.Request(url_sep(ent), headers={
-                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 SerchEducation/1.0",
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 BusquedaEducativa/1.0",
                 "Referer": "https://datos.gob.mx/dataset/catalogo_centros_trabajo_sep",
             })
             with urllib.request.urlopen(req, timeout=120) as r:
@@ -683,7 +683,7 @@ def aplicar_sep(lista, municipios):
 
 def main():
     global args
-    ap = argparse.ArgumentParser(description="Genera escuelas.json, el registro propio de Serch Education")
+    ap = argparse.ArgumentParser(description="Genera escuelas.json, el registro propio de Búsqueda educativa")
     ap.add_argument("--salida", default=str(SALIDA_DEFECTO), help="Ruta del escuelas.json a escribir")
     ap.add_argument("--celda", type=float, default=0.15, help="Tamaño de celda de la rejilla, en grados")
     ap.add_argument("--rondas-celda", type=int, default=4, help="Rondas de intérpretes por celda")

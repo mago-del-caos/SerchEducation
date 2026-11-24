@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Serch Education — revisión semanal de escuelas (vigilante).
+"""Búsqueda educativa — revisión semanal de escuelas (vigilante).
 
 Consulta Overpass API (OpenStreetMap) alrededor del centro por
 defecto del proyecto — el Instituto Juventud del Estado de México
@@ -129,7 +129,7 @@ def obtener_datos(desde_archivo=None):
             data=urllib.parse.urlencode({"data": consulta}).encode("utf-8"),
             headers={
                 "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                "User-Agent": "SerchEducation/1.0 (revision semanal; datos OSM)",
+                "User-Agent": "BusquedaEducativa/1.0 (revision semanal; datos OSM)",
             },
             method="POST",
         )
@@ -142,7 +142,7 @@ def obtener_datos(desde_archivo=None):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Revisión semanal de escuelas de Serch Education")
+    ap = argparse.ArgumentParser(description="Revisión semanal de escuelas de Búsqueda educativa")
     ap.add_argument("--desde-archivo", help="Lee la respuesta de Overpass de un archivo (pruebas)")
     ap.add_argument("--foto", default=str(FOTO_DEFECTO), help="Ruta de la foto snapshot.json")
     args = ap.parse_args()
