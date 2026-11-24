@@ -7,12 +7,12 @@
    Los servicios externos (Overpass API, solo del botón opcional
    «Actualizar en vivo», y las teselas del mapa de OpenStreetMap) NO se
    cachean aquí.
-   serch-v8: resumen principal siempre con el conteo filtrado,
+   serch-v9: resumen principal siempre con el conteo filtrado,
    tipo con inferencia etiquetada por nombre, nivel triangulado
    (SEP / OSM / nombre) con su fuente, y teselas del mapa de
    vuelta a OpenStreetMap estándar (CARTO ahora exige API key).
    ============================================================ */
-const CACHE = "serch-v8";
+const CACHE = "serch-v9";
 const PROPIOS = [
   "./",
   "index.html",
